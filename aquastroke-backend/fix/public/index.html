@@ -1,0 +1,3048 @@
+<!DOCTYPE html>
+<html lang="en" dir="ltr">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>AQUASTROKE — Developmental Swim Planning Tool</title>
+
+<style>
+/* ═══════════════════════════════════════
+   DESIGN TOKENS
+═══════════════════════════════════════ */
+:root {
+  --brand:       #0057FF;
+  --brand-d:     #003FBB;
+  --brand-l:     #EEF3FF;
+  --teal:        #0891B2;
+  --teal-l:      #E0F2FE;
+  --ocean:       #0A1628;
+  --surface:     #FFFFFF;
+  --bg:          #F7F9FC;
+  --border:      #E4E9F0;
+  --text:        #0A1628;
+  --text-2:      #4A5568;
+  --text-3:      #94A3B8;
+  --green:       #059669;
+  --green-l:     #D1FAE5;
+  --red:         #DC2626;
+  --red-l:       #FEE2E2;
+  --amber:       #D97706;
+  --amber-l:     #FEF3C7;
+  --radius:      10px;
+  --shadow:      0 1px 4px rgba(0,0,0,0.06), 0 4px 16px rgba(0,0,0,0.04);
+  --shadow-md:   0 4px 16px rgba(0,0,0,0.10), 0 12px 40px rgba(0,0,0,0.06);
+}
+
+/* ═══════════════════════════════════════
+   BASE
+═══════════════════════════════════════ */
+*, *::before, *::after { margin:0; padding:0; box-sizing:border-box; }
+html { scroll-behavior:smooth; }
+body { font-family:-apple-system,BlinkMacSystemFont,'Segoe UI',system-ui,sans-serif; color:var(--text); background:var(--bg); overflow-x:hidden; line-height:1.6; }
+button { cursor:pointer; font-family:-apple-system,BlinkMacSystemFont,'Segoe UI',system-ui,sans-serif; }
+input, select, textarea { font-family:-apple-system,BlinkMacSystemFont,'Segoe UI',system-ui,sans-serif; }
+a { text-decoration:none; }
+
+/* VIEWS */
+.view { display:none; }
+.view.active { display:block; }
+
+/* ═══════════════════════════════════════
+   SHARED COMPONENTS
+═══════════════════════════════════════ */
+.btn { display:inline-flex; align-items:center; gap:7px; padding:10px 20px; border-radius:var(--radius); font-size:14px; font-weight:700; border:none; transition:all 0.2s; }
+.btn-primary { background:var(--brand); color:white; box-shadow:0 4px 14px rgba(0,87,255,0.28); }
+.btn-primary:hover { background:var(--brand-d); transform:translateY(-1px); box-shadow:0 6px 20px rgba(0,87,255,0.35); }
+.btn-outline { background:white; color:var(--text); border:1.5px solid var(--border); }
+.btn-outline:hover { border-color:var(--brand); color:var(--brand); }
+.btn-ghost { background:transparent; color:var(--text-2); border:none; }
+.btn-ghost:hover { background:var(--bg); color:var(--text); }
+.btn-danger { background:var(--red-l); color:var(--red); border:none; }
+.btn-sm { padding:7px 14px; font-size:13px; }
+.btn-lg { padding:14px 32px; font-size:16px; }
+.btn-icon { width:36px; height:36px; padding:0; justify-content:center; border-radius:8px; }
+
+.pill { display:inline-block; padding:3px 9px; border-radius:100px; font-size:11px; font-weight:700; }
+.pill-blue  { background:var(--brand-l);  color:var(--brand); }
+.pill-green { background:var(--green-l);  color:var(--green); }
+.pill-red   { background:var(--red-l);    color:var(--red); }
+.pill-amber { background:var(--amber-l);  color:var(--amber); }
+.pill-gray  { background:var(--border);   color:var(--text-3); }
+
+.card { background:var(--surface); border:1px solid var(--border); border-radius:var(--radius); }
+.card-header { padding:16px 20px; border-bottom:1px solid var(--border); display:flex; align-items:center; justify-content:space-between; }
+.card-title { font-size:14px; font-weight:700; color:var(--text); }
+.card-body { padding:20px; }
+
+.modal-overlay { display:none; position:fixed; inset:0; z-index:500; background:rgba(10,22,40,0.55); backdrop-filter:blur(4px); align-items:center; justify-content:center; padding:20px; }
+.modal-overlay.open { display:flex; }
+.modal { background:white; border-radius:14px; width:100%; max-width:520px; box-shadow:0 32px 80px rgba(0,0,0,0.22); overflow:hidden; }
+.modal-hd { padding:20px 24px; border-bottom:1px solid var(--border); display:flex; align-items:center; justify-content:space-between; }
+.modal-title { font-size:17px; font-weight:800; }
+.modal-close { background:none; border:none; font-size:18px; color:var(--text-3); padding:4px 8px; border-radius:6px; transition:all .2s; }
+.modal-close:hover { background:var(--bg); color:var(--text); }
+.modal-body { padding:24px; }
+.modal-ft { padding:16px 24px; border-top:1px solid var(--border); display:flex; gap:10px; }
+
+.form-group { display:flex; flex-direction:column; gap:5px; margin-bottom:14px; }
+.form-grid { display:grid; grid-template-columns:1fr 1fr; gap:0 14px; }
+.form-grid .form-group.full { grid-column:1/-1; }
+.form-label { font-size:12px; font-weight:700; color:var(--text-2); text-transform:uppercase; letter-spacing:0.5px; }
+.form-input { background:var(--bg); border:1.5px solid var(--border); border-radius:var(--radius); padding:10px 13px; font-size:14px; color:var(--text); outline:none; transition:border-color .2s; }
+.form-input:focus { border-color:var(--brand); background:white; }
+.form-select { background:var(--bg); border:1.5px solid var(--border); border-radius:var(--radius); padding:10px 13px; font-size:14px; color:var(--text); outline:none; }
+.form-select:focus { border-color:var(--brand); }
+
+.empty-state { text-align:center; padding:56px 24px; }
+.empty-icon { font-size:44px; margin-bottom:12px; }
+.empty-title { font-size:17px; font-weight:700; margin-bottom:6px; }
+.empty-sub { font-size:14px; color:var(--text-3); margin-bottom:20px; }
+
+.toast { position:fixed; bottom:24px; left:50%; transform:translateX(-50%) translateY(64px); background:var(--ocean); color:white; padding:11px 22px; border-radius:var(--radius); font-size:14px; font-weight:600; z-index:999; transition:transform .28s; display:flex; align-items:center; gap:8px; box-shadow:var(--shadow-md); pointer-events:none; }
+.toast.show { transform:translateX(-50%) translateY(0); }
+.toast.success { background:var(--green); }
+.toast.error   { background:var(--red); }
+
+/* ═══════════════════════════════════════
+   ██  LANDING PAGE  ██
+═══════════════════════════════════════ */
+.lp-nav {
+  position:fixed; inset:0 0 auto 0; z-index:100; height:62px;
+  padding:0 48px; display:flex; align-items:center; justify-content:space-between;
+  transition:all .3s;
+}
+.lp-nav.solid { background:rgba(247,249,252,0.96); backdrop-filter:blur(14px); border-bottom:1px solid var(--border); box-shadow:var(--shadow); }
+.lp-logo { display:flex; align-items:center; gap:10px; }
+.lp-logo-mark { width:34px; height:34px; border-radius:9px; background:var(--brand); display:flex; align-items:center; justify-content:center; }
+.lp-logo-mark svg { width:20px; height:20px; }
+.lp-logo-name { font-size:17px; font-weight:900; letter-spacing:2px; color:var(--text); }
+.lp-nav-links { display:flex; gap:4px; }
+.lp-nav-link { background:none; border:none; padding:8px 14px; font-size:14px; font-weight:600; color:var(--text-2); border-radius:8px; transition:all .2s; }
+.lp-nav-link:hover { background:var(--brand-l); color:var(--brand); }
+.lp-nav-right { display:flex; align-items:center; gap:10px; }
+
+/* HERO */
+.lp-hero { min-height:100vh; display:flex; flex-direction:column; align-items:center; justify-content:center; text-align:center; padding:100px 24px 64px; position:relative; overflow:hidden; }
+.lp-hero-bg { position:absolute; inset:0; background:linear-gradient(180deg, #EBF0FF 0%, #F7F9FC 55%); pointer-events:none; }
+.lp-hero-grid { position:absolute; inset:0; background-image:linear-gradient(var(--border) 1px, transparent 1px), linear-gradient(90deg, var(--border) 1px, transparent 1px); background-size:48px 48px; opacity:0.4; pointer-events:none; }
+.lp-hero-glow { position:absolute; width:700px; height:400px; top:10%; left:50%; transform:translateX(-50%); background:radial-gradient(ellipse, rgba(0,87,255,0.10) 0%, transparent 70%); pointer-events:none; }
+.hero-eyebrow { display:inline-flex; align-items:center; gap:7px; background:white; border:1px solid var(--border); border-radius:100px; padding:5px 14px; font-size:12px; font-weight:700; color:var(--brand); box-shadow:var(--shadow); margin-bottom:24px; animation:fadeUp .6s ease both; }
+.hero-dot { width:7px; height:7px; background:var(--green); border-radius:50%; animation:pulse 2s infinite; }
+@keyframes pulse { 0%,100%{opacity:1;transform:scale(1)} 50%{opacity:.4;transform:scale(.7)} }
+.lp-hero h1 { font-size:clamp(42px,7vw,80px); font-weight:900; line-height:1.05; letter-spacing:-2px; color:var(--text); max-width:820px; margin-bottom:18px; animation:fadeUp .6s ease .08s both; position:relative; z-index:1; }
+.lp-hero h1 .accent { color:var(--brand); }
+.lp-hero h1 .outline { -webkit-text-stroke:2px var(--brand); color:transparent; }
+.lp-hero p { font-size:clamp(15px,1.8vw,18px); color:var(--text-2); max-width:540px; line-height:1.75; margin-bottom:32px; animation:fadeUp .6s ease .16s both; position:relative; z-index:1; }
+.hero-actions { display:flex; gap:10px; justify-content:center; flex-wrap:wrap; animation:fadeUp .6s ease .24s both; position:relative; z-index:1; }
+/* Feature nav buttons */
+.feature-nav { display:flex; gap:8px; flex-wrap:wrap; justify-content:center; margin-top:28px; animation:fadeUp .6s ease .32s both; position:relative; z-index:1; }
+.feat-nav-btn { background:white; border:1.5px solid var(--border); border-radius:100px; padding:7px 18px; font-size:13px; font-weight:600; color:var(--text-2); display:flex; align-items:center; gap:6px; transition:all .2s; }
+.feat-nav-btn:hover { border-color:var(--brand); color:var(--brand); background:var(--brand-l); }
+
+/* STATS BAR */
+.stats-bar { display:flex; gap:0; background:white; border:1px solid var(--border); border-radius:var(--radius); box-shadow:var(--shadow); overflow:hidden; margin-top:48px; animation:fadeUp .6s ease .4s both; position:relative; z-index:1; }
+.stat-item { padding:18px 36px; text-align:center; border-right:1px solid var(--border); flex:1; }
+.stat-item:last-child { border-right:none; }
+.stat-num { font-size:28px; font-weight:900; color:var(--brand); }
+.stat-lbl { font-size:12px; color:var(--text-3); margin-top:2px; }
+
+@keyframes fadeUp { from{opacity:0;transform:translateY(16px)} to{opacity:1;transform:translateY(0)} }
+.reveal { opacity:0; transform:translateY(18px); transition:opacity .6s, transform .6s; }
+.reveal.vis { opacity:1; transform:translateY(0); }
+
+/* FEATURES SECTION */
+.lp-section { padding:80px 48px; max-width:1100px; margin:0 auto; }
+.section-label { font-family:'SF Mono','Fira Code','Courier New',monospace; font-size:10px; letter-spacing:3px; text-transform:uppercase; color:var(--brand); display:flex; align-items:center; gap:10px; margin-bottom:10px; }
+.section-label::before { content:''; width:20px; height:1.5px; background:var(--brand); }
+.section-h2 { font-size:clamp(30px,4vw,48px); font-weight:900; line-height:1.1; letter-spacing:-1px; color:var(--text); margin-bottom:12px; }
+.section-sub { font-size:16px; color:var(--text-2); max-width:480px; line-height:1.7; }
+
+.value-grid { display:grid; grid-template-columns:repeat(2,1fr); gap:16px; margin-top:44px; }
+.value-card { background:white; border:1.5px solid var(--border); border-radius:14px; padding:28px 24px; display:flex; gap:16px; transition:all .25s; }
+.value-card:hover { border-color:var(--brand); box-shadow:var(--shadow-md); transform:translateY(-2px); }
+.val-icon { width:44px; height:44px; border-radius:11px; background:var(--brand-l); display:flex; align-items:center; justify-content:center; font-size:20px; flex-shrink:0; }
+.val-title { font-size:16px; font-weight:700; margin-bottom:5px; }
+.val-desc { font-size:13px; color:var(--text-2); line-height:1.6; }
+
+/* PRODUCT PREVIEW */
+.product-split { display:grid; grid-template-columns:1fr 1fr; gap:56px; align-items:center; margin-top:48px; }
+.product-screen { background:var(--ocean); border-radius:16px; overflow:hidden; box-shadow:0 32px 80px rgba(10,22,40,.22); }
+.ps-bar { background:#111E35; padding:10px 14px; display:flex; align-items:center; gap:6px; }
+.ps-dot { width:9px; height:9px; border-radius:50%; }
+.ps-dot.r{background:#FF5F57} .ps-dot.y{background:#FFBD2E} .ps-dot.g{background:#28CA42}
+.ps-body { padding:18px; }
+.ps-section { background:#111E35; border-radius:10px; padding:14px; margin-bottom:10px; }
+.ps-section:last-child { margin-bottom:0; }
+.ps-label { font-size:10px; font-family:'SF Mono','Fira Code','Courier New',monospace; letter-spacing:1.5px; color:#475569; text-transform:uppercase; margin-bottom:8px; }
+.ps-row { display:flex; align-items:center; justify-content:space-between; margin-bottom:6px; }
+.ps-row:last-child { margin-bottom:0; }
+.ps-name { font-size:13px; font-weight:600; color:white; }
+.ps-val { font-family:'SF Mono','Fira Code','Courier New',monospace; font-size:12px; }
+.ps-val.good { color:#34D399; }
+.ps-val.warn { color:#FBBF24; }
+.ps-val.muted { color:#475569; }
+
+/* AUTH SECTION */
+.auth-section { background:var(--ocean); }
+.auth-inner { display:grid; grid-template-columns:1fr 1fr; gap:80px; align-items:center; padding:80px 48px; max-width:1100px; margin:0 auto; }
+.auth-text .section-label { color:#60A5FA; }
+.auth-text .section-label::before { background:#60A5FA; }
+.auth-text .section-h2 { color:white; }
+.auth-text .section-sub { color:#64748B; }
+.auth-box { background:#0D1F3C; border:1px solid #1E3A5F; border-radius:16px; padding:32px; }
+.auth-title { font-size:20px; font-weight:800; color:white; margin-bottom:6px; }
+.auth-sub { font-size:14px; color:#64748B; margin-bottom:28px; }
+.social-btn { width:100%; padding:13px 20px; border-radius:var(--radius); font-size:15px; font-weight:700; display:flex; align-items:center; gap:12px; margin-bottom:10px; border:none; transition:all .2s; }
+.social-btn:hover { transform:translateY(-1px); }
+.social-btn.apple  { background:white;       color:#000; }
+.social-btn.google { background:#4285F4;     color:white; }
+.social-btn.fb     { background:#1877F2;     color:white; }
+.social-icon { width:22px; height:22px; flex-shrink:0; }
+.social-btn span { flex:1; text-align:center; }
+.auth-divider { display:flex; align-items:center; gap:12px; margin:16px 0; }
+.auth-divider::before, .auth-divider::after { content:''; flex:1; height:1px; background:#1E3A5F; }
+.auth-divider span { font-size:12px; color:#475569; }
+.auth-email-input { width:100%; background:#111E35; border:1.5px solid #1E3A5F; border-radius:var(--radius); padding:12px 14px; color:white; font-size:14px; outline:none; transition:border-color .2s; margin-bottom:10px; }
+.auth-email-input::placeholder { color:#334155; }
+.auth-email-input:focus { border-color:#3B82F6; }
+.auth-note { font-size:11px; color:#334155; text-align:center; margin-top:12px; line-height:1.6; }
+
+/* PRICING */
+.pricing-wrap { background:#F0F4FF; border-top:1px solid #D6E0FF; border-bottom:1px solid #D6E0FF; }
+.price-grid { display:grid; grid-template-columns:repeat(3,1fr); gap:16px; margin-top:44px; }
+.price-card { background:white; border:1.5px solid var(--border); border-radius:14px; padding:28px 24px; position:relative; transition:all .25s; }
+.price-card:hover { box-shadow:var(--shadow-md); transform:translateY(-2px); }
+.price-card.featured { background:var(--ocean); border-color:transparent; box-shadow:0 20px 60px rgba(10,22,40,.22); }
+.price-badge { position:absolute; top:-12px; left:50%; transform:translateX(-50%); background:var(--brand); color:white; font-size:10px; font-weight:700; letter-spacing:1.5px; padding:3px 12px; border-radius:100px; text-transform:uppercase; }
+.price-tier { font-family:'SF Mono','Fira Code','Courier New',monospace; font-size:10px; letter-spacing:2px; color:var(--brand); text-transform:uppercase; margin-bottom:8px; }
+.price-card.featured .price-tier { color:#60A5FA; }
+.price-amount { font-size:44px; font-weight:900; line-height:1; color:var(--text); }
+.price-card.featured .price-amount { color:white; }
+.price-amount sup { font-size:18px; vertical-align:top; margin-top:7px; display:inline-block; }
+.price-period { font-size:13px; color:var(--text-3); margin-bottom:18px; }
+.price-card.featured .price-period { color:#475569; }
+.price-divider { height:1px; background:var(--border); margin-bottom:16px; }
+.price-card.featured .price-divider { background:#1E3A5F; }
+.price-feat { display:flex; gap:8px; font-size:13px; color:var(--text-2); margin-bottom:8px; line-height:1.45; }
+.price-card.featured .price-feat { color:#94A3B8; }
+.pck { color:var(--green); flex-shrink:0; font-size:12px; margin-top:2px; }
+.price-card.featured .pck { color:#34D399; }
+.price-btn { width:100%; margin-top:20px; padding:11px; border-radius:var(--radius); font-size:14px; font-weight:700; border:1.5px solid var(--border); background:white; color:var(--text); transition:all .2s; }
+.price-card.featured .price-btn { background:var(--brand); border-color:transparent; color:white; box-shadow:0 4px 16px rgba(0,87,255,.4); }
+.price-btn:hover { opacity:.88; }
+
+/* CTA */
+.lp-cta { background:var(--ocean); padding:80px 48px; text-align:center; }
+.lp-cta h2 { font-size:clamp(32px,5vw,56px); font-weight:900; color:white; letter-spacing:-1px; margin-bottom:12px; }
+.lp-cta p { font-size:16px; color:#475569; margin-bottom:32px; }
+.cta-row { display:flex; gap:10px; justify-content:center; flex-wrap:wrap; }
+.cta-inp { background:#0D1F3C; border:1.5px solid #1E3A5F; border-radius:var(--radius); padding:12px 18px; color:white; font-size:14px; width:270px; outline:none; transition:border-color .2s; }
+.cta-inp::placeholder { color:#334155; }
+.cta-inp:focus { border-color:var(--brand); }
+
+.lp-footer { padding:28px 48px; border-top:1px solid var(--border); display:flex; align-items:center; justify-content:space-between; flex-wrap:wrap; gap:12px; }
+.footer-logo { font-size:14px; font-weight:900; letter-spacing:2px; color:var(--text-3); }
+.footer-copy { font-size:12px; color:var(--text-3); }
+
+
+/* ═══════════════════════════════════════
+   ██  DASHBOARD  ██
+═══════════════════════════════════════ */
+.app { display:flex; height:100vh; overflow:hidden; }
+
+/* SIDEBAR */
+.sidebar { width:232px; flex-shrink:0; background:var(--ocean); display:flex; flex-direction:column; }
+.sb-logo { padding:18px 16px 14px; border-bottom:1px solid #1E3A5F; display:flex; align-items:center; gap:9px; }
+.sb-logo-mark { width:30px; height:30px; border-radius:7px; background:var(--brand); display:flex; align-items:center; justify-content:center; flex-shrink:0; }
+.sb-logo-name { font-size:15px; font-weight:900; letter-spacing:2px; color:white; }
+.sb-nav { flex:1; padding:10px 8px; overflow-y:auto; }
+.sb-section { font-size:9px; font-family:'SF Mono','Fira Code','Courier New',monospace; letter-spacing:2.5px; text-transform:uppercase; color:#334155; padding:8px 10px 4px; }
+.sb-item { display:flex; align-items:center; gap:9px; padding:9px 10px; border-radius:8px; color:#64748B; font-size:13px; font-weight:600; cursor:pointer; transition:all .2s; border:none; background:none; width:100%; text-align:left; margin-bottom:1px; }
+.sb-item:hover { background:#0D1F3C; color:#94A3B8; }
+.sb-item.active { background:var(--brand); color:white; }
+.sb-item .sb-icon { font-size:15px; flex-shrink:0; }
+.sb-item .sb-badge { margin-left:auto; background:rgba(255,255,255,0.12); color:rgba(255,255,255,0.7); font-size:10px; padding:1px 7px; border-radius:100px; }
+.sb-footer { padding:10px 8px; border-top:1px solid #1E3A5F; }
+.sb-user { display:flex; align-items:center; gap:9px; padding:10px; border-radius:8px; }
+.sb-avatar { width:30px; height:30px; border-radius:50%; background:var(--brand); display:flex; align-items:center; justify-content:center; font-size:12px; font-weight:700; color:white; flex-shrink:0; }
+.sb-user-name { font-size:13px; font-weight:600; color:#94A3B8; }
+.sb-user-plan { font-size:10px; color:#334155; margin-top:1px; }
+
+/* TOPBAR */
+.app-main { flex:1; display:flex; flex-direction:column; overflow:hidden; }
+.topbar { height:58px; background:white; border-bottom:1px solid var(--border); padding:0 24px; display:flex; align-items:center; justify-content:space-between; flex-shrink:0; }
+.topbar-title { font-size:15px; font-weight:800; color:var(--text); }
+.topbar-actions { display:flex; align-items:center; gap:8px; }
+.content { flex:1; overflow-y:auto; padding:24px; }
+
+/* STAT CARDS */
+.stat-grid { display:grid; grid-template-columns:repeat(4,1fr); gap:14px; margin-bottom:20px; }
+.stat-card { background:white; border:1px solid var(--border); border-radius:var(--radius); padding:18px; }
+.stat-top { display:flex; align-items:center; justify-content:space-between; margin-bottom:10px; }
+.stat-ico { width:34px; height:34px; border-radius:9px; display:flex; align-items:center; justify-content:center; font-size:15px; }
+.stat-val { font-size:26px; font-weight:900; color:var(--text); }
+.stat-lbl { font-size:12px; color:var(--text-3); margin-top:2px; }
+.two-col { display:grid; grid-template-columns:2fr 1fr; gap:14px; }
+.three-col { display:grid; grid-template-columns:1fr 1fr 1fr; gap:14px; }
+
+/* TABLE */
+.data-table { width:100%; border-collapse:collapse; }
+.data-table th { font-size:11px; font-weight:700; color:var(--text-3); text-align:left; padding:8px 12px; border-bottom:1px solid var(--border); text-transform:uppercase; letter-spacing:.5px; }
+.data-table td { padding:11px 12px; border-bottom:1px solid var(--border); font-size:13px; color:var(--text); }
+.data-table tr:last-child td { border-bottom:none; }
+.data-table tbody tr { cursor:pointer; transition:background .15s; }
+.data-table tbody tr:hover td { background:var(--bg); }
+.ath-cell { display:flex; align-items:center; gap:9px; }
+.ath-av { width:30px; height:30px; border-radius:8px; background:var(--brand-l); display:flex; align-items:center; justify-content:center; font-size:11px; font-weight:800; color:var(--brand); flex-shrink:0; }
+.ath-nm { font-weight:700; font-size:13px; }
+.ath-ev { font-size:11px; color:var(--text-3); }
+
+/* PERFORMANCE CHART */
+.chart-wrap { position:relative; height:180px; }
+.chart-svg { width:100%; height:100%; }
+
+/* COACH DASHBOARD SPECIFIC */
+.season-phase-bar { display:grid; grid-template-columns:repeat(6,1fr); gap:6px; margin-bottom:18px; }
+.phase-chip { border-radius:7px; padding:10px 8px; text-align:center; cursor:pointer; border:1.5px solid transparent; transition:all .2s; }
+.phase-chip.current { border-color:var(--brand); }
+.phase-chip-name { font-size:10px; font-family:'SF Mono','Fira Code','Courier New',monospace; font-weight:700; letter-spacing:1px; }
+.phase-chip-weeks { font-size:12px; font-weight:800; margin-top:3px; }
+.phase-chip-lbl { font-size:10px; color:var(--text-3); margin-top:1px; }
+
+/* TOGGLE */
+.toggle { position:relative; width:38px; height:21px; }
+.toggle input { opacity:0; width:0; height:0; }
+.toggle-slider { position:absolute; inset:0; background:var(--border); border-radius:100px; cursor:pointer; transition:.25s; }
+.toggle-slider::before { content:''; position:absolute; width:15px; height:15px; left:3px; bottom:3px; background:white; border-radius:50%; transition:.25s; box-shadow:0 1px 3px rgba(0,0,0,.2); }
+.toggle input:checked + .toggle-slider { background:var(--brand); }
+.toggle input:checked + .toggle-slider::before { transform:translateX(17px); }
+
+/* ATHLETE VIEW */
+.today-session { background:linear-gradient(135deg, var(--brand) 0%, #0041CC 100%); border-radius:14px; padding:24px; color:white; margin-bottom:16px; }
+.ts-label { font-size:10px; font-family:'SF Mono','Fira Code','Courier New',monospace; letter-spacing:2px; opacity:.7; text-transform:uppercase; margin-bottom:6px; }
+.ts-phase { font-size:13px; opacity:.75; margin-bottom:14px; }
+.ts-main { font-size:20px; font-weight:800; margin-bottom:4px; }
+.ts-meta { font-size:13px; opacity:.75; }
+.ts-blocks { display:grid; grid-template-columns:repeat(3,1fr); gap:10px; margin-top:18px; }
+.ts-block { background:rgba(255,255,255,.1); border-radius:9px; padding:12px 10px; text-align:center; }
+.ts-block-val { font-size:18px; font-weight:900; }
+.ts-block-lbl { font-size:10px; opacity:.65; margin-top:2px; }
+.trial-compare { display:grid; grid-template-columns:1fr 1fr 1fr; gap:10px; }
+.tc-box { background:white; border:1.5px solid var(--border); border-radius:10px; padding:14px; }
+.tc-box.active { border-color:var(--brand); }
+.tc-num { font-size:10px; font-family:'SF Mono','Fira Code','Courier New',monospace; letter-spacing:1.5px; color:var(--text-3); text-transform:uppercase; margin-bottom:6px; }
+.tc-val { font-size:20px; font-weight:900; font-family:'SF Mono','Fira Code','Courier New',monospace; color:var(--text); }
+.tc-target { font-size:11px; color:var(--text-3); margin-top:4px; }
+.tc-gap { font-size:13px; font-weight:700; margin-top:6px; }
+.tc-gap.good { color:var(--green); }
+.tc-gap.bad  { color:var(--red); }
+
+/* ADAPT BUTTON */
+.adapt-btn { width:100%; padding:14px; border-radius:var(--radius); background:linear-gradient(135deg, var(--brand), #0041CC); color:white; border:none; font-size:15px; font-weight:800; letter-spacing:.5px; display:flex; align-items:center; justify-content:center; gap:9px; transition:all .25s; box-shadow:0 4px 16px rgba(0,87,255,.3); }
+.adapt-btn:hover { transform:translateY(-2px); box-shadow:0 8px 24px rgba(0,87,255,.4); }
+.adapt-btn.loading { opacity:.7; cursor:wait; }
+
+/* VOLUME SLIDER */
+.vol-row { display:flex; align-items:center; gap:12px; margin-bottom:12px; }
+.vol-phase { font-size:12px; font-weight:700; min-width:60px; }
+.vol-slider { flex:1; height:4px; border-radius:2px; -webkit-appearance:none; appearance:none; background:var(--border); outline:none; }
+.vol-slider::-webkit-slider-thumb { -webkit-appearance:none; width:16px; height:16px; border-radius:50%; background:var(--brand); cursor:pointer; }
+.vol-num { font-family:'SF Mono','Fira Code','Courier New',monospace; font-size:12px; min-width:48px; text-align:right; color:var(--text-2); }
+
+/* FILE UPLOAD */
+.upload-zone { border:2px dashed var(--border); border-radius:var(--radius); padding:28px; text-align:center; cursor:pointer; transition:all .25s; }
+.upload-zone:hover,.upload-zone.over { border-color:var(--brand); background:var(--brand-l); }
+.file-row { display:flex; align-items:center; gap:10px; padding:10px 14px; background:white; border:1px solid var(--border); border-radius:var(--radius); margin-bottom:8px; }
+.file-ic { font-size:18px; }
+.file-name { font-size:13px; font-weight:700; flex:1; }
+.file-sz { font-size:11px; color:var(--text-3); }
+
+/* RESPONSIVE */
+@media(max-width:768px) {
+  .lp-nav { padding:0 20px; }
+  .lp-nav-links { display:none; }
+  .lp-section { padding:56px 20px; }
+  .value-grid,.product-split,.auth-inner,.price-grid,.two-col,.three-col,.stat-grid,.trial-compare { grid-template-columns:1fr; }
+  .season-phase-bar { grid-template-columns:repeat(3,1fr); }
+  .sidebar { display:none; }
+  .stats-bar { flex-direction:column; }
+}
+</style>
+
+<!-- ═══════════════════════════════════════
+     SUPABASE — Data Persistence Layer
+     Replace YOUR_URL and YOUR_KEY below
+     Get them from: supabase.com → Project Settings → API
+════════════════════════════════════════ -->
+<script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script>
+<script src="/api-client.js"></script>
+<script>
+// ── SUPABASE CONFIG ─────────────────────────────────────────────────────
+// 1. Go to supabase.com and create a free project
+// 2. Go to Project Settings → API
+// 3. Copy "Project URL" and "anon public" key and paste below
+const SUPABASE_URL  = 'https://vunkrwcmxsmraogiuhmm.supabase.co';
+const SUPABASE_KEY  = 'eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6InZ1bmtyd2NteHNtcmFvZ2l1aG1tIiwicm9sZSI6ImFub24iLCJpYXQiOjE3NzIzODgwMTgsImV4cCI6MjA4Nzk2NDAxOH0.YjT6eA81A1E0cSuyvkEP_f-n8c0UbS9UjMjQI0dPd6k';
+
+let supabase = null;
+
+function initSupabase() {
+  try {
+    window.AQ.initAQUASTROKEAuth(SUPABASE_URL, SUPABASE_KEY);
+    supabase = window._supabaseClient;
+    console.log('✓ AQUASTROKE backend connected');
+    return true;
+  } catch(e) {
+    console.error('Supabase init failed:', e);
+    return false;
+  }
+}
+
+// ── SAVE STATE TO SUPABASE ──────────────────────────────────────────────
+async function saveToCloud(coachId) {
+  if (!supabase) return;
+  try {
+    const { error } = await supabase
+      .from('coach_data')
+      .upsert({
+        coach_id: coachId || 'default',
+        data: JSON.stringify(S),
+        updated_at: new Date().toISOString()
+      }, { onConflict: 'coach_id' });
+    if (error) console.error('Save error:', error);
+    else showToast('✓ Saved to cloud', 'success');
+  } catch(e) {
+    console.error('Cloud save failed:', e);
+  }
+}
+
+// ── LOAD STATE FROM SUPABASE ────────────────────────────────────────────
+async function loadFromCloud(coachId) {
+  if (!supabase) return false;
+  try {
+    const { data, error } = await supabase
+      .from('coach_data')
+      .select('data')
+      .eq('coach_id', coachId || 'default')
+      .single();
+    if (error || !data) return false;
+    const loaded = JSON.parse(data.data);
+    Object.assign(S, loaded);
+    showToast('✓ Data loaded from cloud', 'success');
+    return true;
+  } catch(e) {
+    console.error('Cloud load failed:', e);
+    return false;
+  }
+}
+
+// ── AUTO-SAVE: triggers after every data change ─────────────────────────
+// Called inside saveAthlete(), saveResult(), etc.
+function cloudSync() {
+  if (supabase) saveToCloud('default');
+}
+</script>
+
+</head>
+<body>
+
+<!-- ─── TOAST ─── -->
+<div class="toast" id="toast"></div>
+
+<!-- ════════════════════════════════════
+     MODALS
+════════════════════════════════════ -->
+<!-- Add Athlete -->
+<div class="modal-overlay" id="modalAthlete">
+  <div class="modal">
+    <div class="modal-hd"><div class="modal-title">Add New Athlete</div><button class="modal-close" onclick="closeModal('modalAthlete')">✕</button></div>
+    <div class="modal-body">
+      <div class="form-grid">
+        <div class="form-group"><label class="form-label">Full Name *</label><input class="form-input" id="f-name" placeholder="e.g. Mohamed Ahmed" type="text"></div>
+        <div class="form-group"><label class="form-label">Date of Birth</label><input class="form-input" id="f-dob" type="date"></div>
+        <div class="form-group"><label class="form-label">Primary Event *</label>
+          <select class="form-select" id="f-event">
+            <option value="">Select event</option>
+            <option>50m Freestyle</option><option>100m Freestyle</option><option>200m Freestyle</option><option>400m Freestyle</option>
+            <option>100m Backstroke</option><option>200m Backstroke</option>
+            <option>100m Breaststroke</option><option>200m Breaststroke</option>
+            <option>100m Butterfly</option><option>200m Butterfly</option>
+            <option>200m IM</option><option>400m IM</option><option>800m Freestyle</option><option>1500m Freestyle</option>
+          </select>
+        </div>
+        <div class="form-group"><label class="form-label">Stroke Category</label>
+          <select class="form-select" id="f-category">
+            <option value="Sprint">Sprint (50–200m)</option>
+            <option value="Middle">Middle Distance (400m IM / 400m Free)</option>
+            <option value="Distance">Distance (800m+)</option>
+          </select>
+        </div>
+        <div class="form-group"><label class="form-label">T1 Target (sec)</label><input class="form-input" id="f-t1" placeholder="e.g. 58.0" type="number" step="0.1"></div>
+        <div class="form-group"><label class="form-label">T2 Target (sec)</label><input class="form-input" id="f-t2" placeholder="e.g. 56.5" type="number" step="0.1"></div>
+        <div class="form-group"><label class="form-label">T3 Target (sec)</label><input class="form-input" id="f-t3" placeholder="e.g. 55.0" type="number" step="0.1"></div>
+        <div class="form-group full"><label class="form-label">Notes</label><input class="form-input" id="f-notes" placeholder="Any additional info..." type="text"></div>
+      </div>
+    </div>
+    <div class="modal-ft"><button class="btn btn-primary" onclick="saveAthlete()">Save Athlete</button><button class="btn btn-outline" onclick="closeModal('modalAthlete')">Cancel</button></div>
+  </div>
+</div>
+
+<!-- Record Trial Result -->
+<div class="modal-overlay" id="modalResult">
+  <div class="modal">
+    <div class="modal-hd"><div class="modal-title" id="mResultTitle">Record Trial Result</div><button class="modal-close" onclick="closeModal('modalResult')">✕</button></div>
+    <div class="modal-body">
+      <div class="form-grid">
+        <div class="form-group"><label class="form-label">Trial</label>
+          <select class="form-select" id="r-trial"><option value="1">Trial 1 — Week 16</option><option value="2">Trial 2 — Week 24</option><option value="3">Trial 3 — Week 31</option></select>
+        </div>
+        <div class="form-group"><label class="form-label">Date</label><input class="form-input" id="r-date" type="date"></div>
+        <div class="form-group"><label class="form-label">Actual Time (sec) *</label><input class="form-input" id="r-actual" placeholder="e.g. 60.3" type="number" step="0.01"></div>
+        <div class="form-group"><label class="form-label">Stroke Rate (cycles/min)</label><input class="form-input" id="r-sr" placeholder="e.g. 42" type="number" step="1"></div>
+        <div class="form-group"><label class="form-label">RPE (1–10) *</label>
+          <select class="form-select" id="r-rpe">
+            <option value="">Select RPE</option>
+            <option value="1">1 — Very Light</option><option value="2">2</option><option value="3">3 — Light</option>
+            <option value="4">4</option><option value="5">5 — Moderate</option><option value="6">6</option>
+            <option value="7">7 — Hard</option><option value="8">8</option><option value="9">9 — Very Hard</option>
+            <option value="10">10 — Maximum</option>
+          </select>
+        </div>
+        <div class="form-group"><label class="form-label">Context Flag *</label>
+          <select class="form-select" id="r-context">
+            <option value="Normal">Normal</option>
+            <option value="Illness">Illness / Sick</option>
+            <option value="Injury">Injury</option>
+            <option value="Exam">Exam / Academic stress</option>
+            <option value="Equipment">Equipment change</option>
+            <option value="Excellent">Excellent conditions</option>
+          </select>
+        </div>
+        <div class="form-group full"><label class="form-label">Coach Notes</label><input class="form-input" id="r-notes" placeholder="Technical observations, stroke breakdown..." type="text"></div>
+      </div>
+    </div>
+    <div class="modal-ft"><button class="btn btn-primary" onclick="saveResult()">Save Result</button><button class="btn btn-outline" onclick="closeModal('modalResult')">Cancel</button></div>
+  </div>
+</div>
+
+<!-- ════════════════════════════════════
+     VIEW: LANDING PAGE
+════════════════════════════════════ -->
+<div class="view active" id="view-landing">
+
+  <nav class="lp-nav" id="lpNav">
+    <div class="lp-logo">
+      <div class="lp-logo-mark"><svg viewBox="0 0 20 20" fill="none"><path d="M2 13 Q6 7 10 10 Q14 13 18 7" stroke="white" stroke-width="2.2" stroke-linecap="round"/><circle cx="10" cy="5" r="2.2" stroke="white" stroke-width="1.5" fill="none"/></svg></div>
+      <span class="lp-logo-name">AQUASTROKE</span>
+    </div>
+    <div class="lp-nav-links">
+      <button class="lp-nav-link" onclick="scrollTo('sect-features')">Features</button>
+      <button class="lp-nav-link" onclick="scrollTo('sect-coaches')">For Coaches</button>
+      <button class="lp-nav-link" onclick="scrollTo('sect-pricing')">Pricing</button>
+    </div>
+    <div class="lp-nav-right">
+      <button class="btn btn-outline btn-sm" onclick="switchView('view-dashboard')">Sign In</button>
+      <button class="btn btn-primary btn-sm" onclick="switchTo('auth')">Get Started</button>
+    </div>
+  </nav>
+
+  <!-- HERO -->
+  <div class="lp-hero">
+    <div class="lp-hero-bg"></div>
+    <div class="lp-hero-grid"></div>
+    <div class="lp-hero-glow"></div>
+    <div class="hero-eyebrow"><span class="hero-dot"></span> Developmental Swim Planning Tool</div>
+    <h1>Save Time.<br>Measure Progress.<br><span class="accent">Unify Your Coaching.</span></h1>
+    <p>Stop spending hours planning daily sessions. AQUASTROKE gives you a 36-week science-based plan, athlete tracking, and trial result analysis — all in one place.</p>
+    <div class="hero-actions">
+      <button class="btn btn-primary btn-lg" onclick="switchTo('auth')">Get Started Free</button>
+      <button class="btn btn-outline btn-lg" onclick="switchView('view-dashboard')">View Dashboard</button>
+    </div>
+    <!-- Feature Navigation -->
+    <div class="feature-nav">
+      <button class="feat-nav-btn" onclick="scrollTo('sect-features')">📋 Training Plan</button>
+      <button class="feat-nav-btn" onclick="scrollTo('sect-coaches')">👤 Athlete Tracking</button>
+      <button class="feat-nav-btn" onclick="scrollTo('sect-pricing')">📊 Trial Results</button>
+      <button class="feat-nav-btn" onclick="scrollTo('sect-auth')">🔒 Sign In with Apple/Google</button>
+      <button class="feat-nav-btn" onclick="scrollTo('sect-pricing')">💳 Pricing</button>
+    </div>
+    <div class="stats-bar">
+      <div class="stat-item"><div class="stat-num">36</div><div class="stat-lbl">Weeks Planned</div></div>
+      <div class="stat-item"><div class="stat-num">3</div><div class="stat-lbl">Official Trials</div></div>
+      <div class="stat-item"><div class="stat-num">6</div><div class="stat-lbl">Daily Sessions</div></div>
+      <div class="stat-item"><div class="stat-num">0</div><div class="stat-lbl">Guesswork</div></div>
+    </div>
+  </div>
+
+  <!-- VALUE PROPS -->
+  <div class="lp-section" id="sect-features">
+    <div class="section-label reveal">The Problem</div>
+    <h2 class="section-h2 reveal">Coaches spend hours planning.<br>Not coaching.</h2>
+    <p class="section-sub reveal">Every week: building schedules, messaging athletes, making decisions without data. AQUASTROKE fixes all of that.</p>
+    <div class="value-grid reveal">
+      <div class="value-card"><div class="val-icon">⏱️</div><div><div class="val-title">Save 3+ hours per week</div><div class="val-desc">The plan is ready from Week 1 to Week 36. Every day has full session details — no more daily planning from scratch.</div></div></div>
+      <div class="value-card"><div class="val-icon">📊</div><div><div class="val-title">Measure performance objectively</div><div class="val-desc">3 official timed trials at scientifically-correct intervals. Record the result and immediately see the gap between target and reality.</div></div></div>
+      <div class="value-card"><div class="val-icon">📋</div><div><div class="val-title">Unify your coaching methodology</div><div class="val-desc">Every athlete follows the same science-based system. No conflicting approaches, no gaps in the season plan.</div></div></div>
+      <div class="value-card"><div class="val-icon">🎯</div><div><div class="val-title">Reduce guesswork decisions</div><div class="val-desc">Every decision is backed by AIS methodology and structured rules — not habit. Coach judgment remains essential.</div></div></div>
+    </div>
+  </div>
+
+  <!-- PRODUCT PREVIEW -->
+  <div style="background:white;border-top:1px solid var(--border);border-bottom:1px solid var(--border);">
+  <div class="lp-section" id="sect-coaches">
+    <div class="section-label reveal">Coach Dashboard</div>
+    <h2 class="section-h2 reveal">Everything a coach needs.<br>Nothing they don't.</h2>
+    <div class="product-split reveal">
+      <div>
+        <div style="display:flex;flex-direction:column;gap:14px;">
+          <div style="display:flex;gap:14px;align-items:flex-start;padding:16px;background:var(--bg);border-radius:var(--radius);border:1px solid var(--border);">
+            <div style="font-size:22px;flex-shrink:0;">📋</div>
+            <div><div style="font-size:14px;font-weight:700;margin-bottom:3px;">Create & Modify Season Plan</div><div style="font-size:13px;color:var(--text-2);">36-week template with GPP, SPP1, SPP2, COMP, Taper, Championship. Adjust weekly volume per phase.</div></div>
+          </div>
+          <div style="display:flex;gap:14px;align-items:flex-start;padding:16px;background:var(--bg);border-radius:var(--radius);border:1px solid var(--border);">
+            <div style="font-size:22px;flex-shrink:0;">🎯</div>
+            <div><div style="font-size:14px;font-weight:700;margin-bottom:3px;">Enter Trial Results</div><div style="font-size:13px;color:var(--text-2);">Log actual vs target times for each trial. See gap % instantly. Export to Excel or generate PDF report.</div></div>
+          </div>
+          <div style="display:flex;gap:14px;align-items:flex-start;padding:16px;background:var(--bg);border-radius:var(--radius);border:1px solid var(--border);">
+            <div style="font-size:22px;flex-shrink:0;">📈</div>
+            <div><div style="font-size:14px;font-weight:700;margin-bottom:3px;">Performance Charts</div><div style="font-size:13px;color:var(--text-2);">Visual progress across all 3 trials. Spot trends. Know which athletes are on track before the championship.</div></div>
+          </div>
+        </div>
+      </div>
+      <!-- Mini preview -->
+      <div class="product-screen">
+        <div class="ps-bar"><div class="ps-dot r"></div><div class="ps-dot y"></div><div class="ps-dot g"></div></div>
+        <div class="ps-body">
+          <div class="ps-section">
+            <div class="ps-label">Coach Dashboard · Week 20 · SPP2</div>
+            <div class="ps-row"><span class="ps-name">Mohamed Ahmed</span><span class="ps-val good">T1: -2.1%</span></div>
+            <div class="ps-row"><span class="ps-name">Sara Mahmoud</span><span class="ps-val warn">T1: +4.3%</span></div>
+            <div class="ps-row"><span class="ps-name">Khaled Ibrahim</span><span class="ps-val muted">T1: Pending</span></div>
+          </div>
+          <div class="ps-section">
+            <div class="ps-label">Today's Session</div>
+            <div class="ps-row"><span class="ps-name">Free LSD + Pace</span><span class="ps-val muted">3,600m</span></div>
+            <div class="ps-row"><span class="ps-name">Intensity</span><span class="ps-val good">86%</span></div>
+            <div class="ps-row"><span class="ps-name">Tools</span><span class="ps-val muted">Snorkel · Paddles</span></div>
+          </div>
+          <div class="ps-section">
+            <div class="ps-label">Next Trial</div>
+            <div class="ps-row"><span class="ps-name">Trial #2</span><span class="ps-val warn">4 weeks</span></div>
+          </div>
+        </div>
+      </div>
+    </div>
+  </div>
+  </div>
+
+  <!-- AUTH / SIGN IN SECTION -->
+  <div class="auth-section" id="sect-auth">
+    <div class="auth-inner">
+      <div class="auth-text">
+        <div class="section-label reveal">Secure Access</div>
+        <h2 class="section-h2 reveal">Sign in instantly.<br>No passwords needed.</h2>
+        <p class="section-sub reveal">Use your existing Apple, Google, or Facebook account. Your data is encrypted and yours alone.</p>
+        <div style="margin-top:28px;display:flex;flex-direction:column;gap:12px;" class="reveal">
+          <div style="display:flex;align-items:center;gap:10px;color:#475569;font-size:14px;">
+            <span style="color:#34D399;font-size:16px;">✓</span> No password to remember or reset
+          </div>
+          <div style="display:flex;align-items:center;gap:10px;color:#475569;font-size:14px;">
+            <span style="color:#34D399;font-size:16px;">✓</span> 2-factor authentication built-in via Apple/Google
+          </div>
+          <div style="display:flex;align-items:center;gap:10px;color:#475569;font-size:14px;">
+            <span style="color:#34D399;font-size:16px;">✓</span> Your coaching data is never shared or sold
+          </div>
+        </div>
+      </div>
+      <div class="auth-box reveal">
+        <div class="auth-title">Create your account</div>
+        <div class="auth-sub">Free forever. No credit card required.</div>
+        <button class="social-btn apple" onclick="handleSocialAuth('Apple')">
+          <svg class="social-icon" viewBox="0 0 24 24" fill="currentColor"><path d="M18.71 19.5c-.83 1.24-1.71 2.45-3.05 2.47-1.34.03-1.77-.79-3.29-.79-1.53 0-2 .77-3.27.82-1.31.05-2.3-1.32-3.14-2.53C4.25 17 2.94 12.45 4.7 9.39c.87-1.52 2.43-2.48 4.12-2.51 1.28-.02 2.5.87 3.29.87.78 0 2.26-1.07 3.8-.91.65.03 2.47.26 3.64 1.98-.09.06-2.17 1.28-2.15 3.81.03 3.02 2.65 4.03 2.68 4.04-.03.07-.42 1.44-1.38 2.83M13 3.5c.73-.83 1.94-1.46 2.94-1.5.13 1.17-.34 2.35-1.04 3.19-.69.85-1.83 1.51-2.95 1.42-.15-1.15.41-2.35 1.05-3.11z"/></svg>
+          <span>Continue with Apple</span>
+        </button>
+        <button class="social-btn google" onclick="handleSocialAuth('Google')">
+          <svg class="social-icon" viewBox="0 0 24 24"><path fill="white" d="M22.56 12.25c0-.78-.07-1.53-.2-2.25H12v4.26h5.92c-.26 1.37-1.04 2.53-2.21 3.31v2.77h3.57c2.08-1.92 3.28-4.74 3.28-8.09z"/><path fill="white" d="M12 23c2.97 0 5.46-.98 7.28-2.66l-3.57-2.77c-.98.66-2.23 1.06-3.71 1.06-2.86 0-5.29-1.93-6.16-4.53H2.18v2.84C3.99 20.53 7.7 23 12 23z"/><path fill="white" d="M5.84 14.09c-.22-.66-.35-1.36-.35-2.09s.13-1.43.35-2.09V7.07H2.18C1.43 8.55 1 10.22 1 12s.43 3.45 1.18 4.93l2.85-2.22.81-.62z"/><path fill="white" d="M12 5.38c1.62 0 3.06.56 4.21 1.64l3.15-3.15C17.45 2.09 14.97 1 12 1 7.7 1 3.99 3.47 2.18 7.07l3.66 2.84c.87-2.6 3.3-4.53 6.16-4.53z"/></svg>
+          <span>Continue with Google</span>
+        </button>
+        <button class="social-btn fb" onclick="handleSocialAuth('Facebook')">
+          <svg class="social-icon" viewBox="0 0 24 24" fill="white"><path d="M24 12.073c0-6.627-5.373-12-12-12s-12 5.373-12 12c0 5.99 4.388 10.954 10.125 11.854v-8.385H7.078v-3.47h3.047V9.43c0-3.007 1.792-4.669 4.533-4.669 1.312 0 2.686.235 2.686.235v2.953H15.83c-1.491 0-1.956.925-1.956 1.874v2.25h3.328l-.532 3.47h-2.796v8.385C19.612 23.027 24 18.062 24 12.073z"/></svg>
+          <span>Continue with Facebook</span>
+        </button>
+        <div class="auth-divider"><span>or use email</span></div>
+        <input class="auth-email-input" type="email" placeholder="coach@example.com">
+        <button class="btn btn-primary" style="width:100%;padding:13px;font-size:15px;" onclick="switchView('view-dashboard')">Continue with Email →</button>
+        <div class="auth-note">By signing up, you agree to our Terms of Service and Privacy Policy. We never share your data.</div>
+      </div>
+    </div>
+  </div>
+
+  <!-- PRICING -->
+  <div class="pricing-wrap">
+  <div class="lp-section" id="sect-pricing">
+    <div class="section-label reveal">Pricing</div>
+    <h2 class="section-h2 reveal">Start free. Scale when ready.</h2>
+    <p class="section-sub reveal">No hidden fees. No long-term contracts.</p>
+    <div class="price-grid reveal">
+      <div class="price-card">
+        <div class="price-tier">FREE</div>
+        <div class="price-amount"><sup>$</sup>0</div>
+        <div class="price-period">Forever · No card needed</div>
+        <div class="price-divider"></div>
+        <div class="price-feat"><span class="pck">✓</span>Complete 36-week plan</div>
+        <div class="price-feat"><span class="pck">✓</span>Up to 5 athletes</div>
+        <div class="price-feat"><span class="pck">✓</span>3 official trials</div>
+        <div class="price-feat"><span class="pck">✓</span>File upload &amp; download</div>
+        <div class="price-feat" style="opacity:.35"><span class="pck">✓</span>Performance charts</div>
+        <div class="price-feat" style="opacity:.35"><span class="pck">✓</span>PDF reports</div>
+        <button class="price-btn" onclick="switchTo('auth')">Get Started Free</button>
+      </div>
+      <div class="price-card featured">
+        <div class="price-badge">Most Popular</div>
+        <div class="price-tier">COACH</div>
+        <div class="price-amount"><sup>$</sup>29</div>
+        <div class="price-period">per month · billed monthly</div>
+        <div class="price-divider"></div>
+        <div class="price-feat"><span class="pck">✓</span>Everything in Free +</div>
+        <div class="price-feat"><span class="pck">✓</span>Unlimited athletes</div>
+        <div class="price-feat"><span class="pck">✓</span>Performance charts</div>
+        <div class="price-feat"><span class="pck">✓</span>PDF reports per athlete</div>
+        <div class="price-feat"><span class="pck">✓</span>Excel export</div>
+        <div class="price-feat"><span class="pck">✓</span>Auto-adapt plan button</div>
+        <div class="price-feat"><span class="pck">✓</span>WhatsApp support</div>
+        <button class="price-btn" onclick="switchTo('auth')">Start 14-Day Free Trial</button>
+      </div>
+      <div class="price-card">
+        <div class="price-tier">ACADEMY</div>
+        <div class="price-amount"><sup>$</sup>79</div>
+        <div class="price-period">per month · multiple coaches</div>
+        <div class="price-divider"></div>
+        <div class="price-feat"><span class="pck">✓</span>Everything in Coach +</div>
+        <div class="price-feat"><span class="pck">✓</span>Multiple coaches</div>
+        <div class="price-feat"><span class="pck">✓</span>Team groups &amp; divisions</div>
+        <div class="price-feat"><span class="pck">✓</span>Cross-athlete analytics</div>
+        <div class="price-feat"><span class="pck">✓</span>White-label branding</div>
+        <div class="price-feat"><span class="pck">✓</span>Priority support</div>
+        <button class="price-btn" onclick="switchTo('auth')">Contact Us</button>
+      </div>
+    </div>
+  </div>
+  </div>
+
+  <!-- CTA -->
+  <div class="lp-cta">
+    <h2>Start your smart season.</h2>
+    <p>Free. No card. In 2 minutes.</p>
+    <div class="cta-row">
+      <input class="cta-inp" type="email" placeholder="your@email.com">
+      <button class="btn btn-primary btn-lg" onclick="switchTo('auth')">Get Started →</button>
+    </div>
+  </div>
+
+  <footer class="lp-footer">
+    <div class="footer-logo">AQUASTROKE</div>
+    <div class="footer-copy">© 2025 AQUASTROKE · Developmental Swim Planning Tool</div>
+  </footer>
+
+</div><!-- /view-landing -->
+
+
+<!-- ════════════════════════════════════
+     VIEW: AUTH
+════════════════════════════════════ -->
+<div class="view" id="view-auth">
+  <div style="min-height:100vh;display:flex;align-items:center;justify-content:center;background:var(--ocean);padding:24px;">
+    <div style="width:100%;max-width:400px;">
+      <div style="text-align:center;margin-bottom:32px;">
+        <div style="display:inline-flex;align-items:center;gap:9px;margin-bottom:16px;">
+          <div class="lp-logo-mark"><svg viewBox="0 0 20 20" fill="none"><path d="M2 13 Q6 7 10 10 Q14 13 18 7" stroke="white" stroke-width="2.2" stroke-linecap="round"/><circle cx="10" cy="5" r="2.2" stroke="white" stroke-width="1.5" fill="none"/></svg></div>
+          <span style="font-size:18px;font-weight:900;letter-spacing:2px;color:white;">AQUASTROKE</span>
+        </div>
+        <div style="font-size:22px;font-weight:800;color:white;margin-bottom:6px;">Welcome back</div>
+        <div style="font-size:14px;color:#475569;">Sign in to your coaching platform</div>
+      </div>
+      <div class="auth-box">
+        <button class="social-btn apple" onclick="handleSocialAuth('Apple')">
+          <svg class="social-icon" viewBox="0 0 24 24" fill="currentColor"><path d="M18.71 19.5c-.83 1.24-1.71 2.45-3.05 2.47-1.34.03-1.77-.79-3.29-.79-1.53 0-2 .77-3.27.82-1.31.05-2.3-1.32-3.14-2.53C4.25 17 2.94 12.45 4.7 9.39c.87-1.52 2.43-2.48 4.12-2.51 1.28-.02 2.5.87 3.29.87.78 0 2.26-1.07 3.8-.91.65.03 2.47.26 3.64 1.98-.09.06-2.17 1.28-2.15 3.81.03 3.02 2.65 4.03 2.68 4.04-.03.07-.42 1.44-1.38 2.83M13 3.5c.73-.83 1.94-1.46 2.94-1.5.13 1.17-.34 2.35-1.04 3.19-.69.85-1.83 1.51-2.95 1.42-.15-1.15.41-2.35 1.05-3.11z"/></svg>
+          <span>Continue with Apple</span>
+        </button>
+        <button class="social-btn google" onclick="handleSocialAuth('Google')">
+          <svg class="social-icon" viewBox="0 0 24 24"><path fill="white" d="M22.56 12.25c0-.78-.07-1.53-.2-2.25H12v4.26h5.92c-.26 1.37-1.04 2.53-2.21 3.31v2.77h3.57c2.08-1.92 3.28-4.74 3.28-8.09z"/><path fill="white" d="M12 23c2.97 0 5.46-.98 7.28-2.66l-3.57-2.77c-.98.66-2.23 1.06-3.71 1.06-2.86 0-5.29-1.93-6.16-4.53H2.18v2.84C3.99 20.53 7.7 23 12 23z"/><path fill="white" d="M5.84 14.09c-.22-.66-.35-1.36-.35-2.09s.13-1.43.35-2.09V7.07H2.18C1.43 8.55 1 10.22 1 12s.43 3.45 1.18 4.93l2.85-2.22.81-.62z"/><path fill="white" d="M12 5.38c1.62 0 3.06.56 4.21 1.64l3.15-3.15C17.45 2.09 14.97 1 12 1 7.7 1 3.99 3.47 2.18 7.07l3.66 2.84c.87-2.6 3.3-4.53 6.16-4.53z"/></svg>
+          <span>Continue with Google</span>
+        </button>
+        <button class="social-btn fb" onclick="handleSocialAuth('Facebook')">
+          <svg class="social-icon" viewBox="0 0 24 24" fill="white"><path d="M24 12.073c0-6.627-5.373-12-12-12s-12 5.373-12 12c0 5.99 4.388 10.954 10.125 11.854v-8.385H7.078v-3.47h3.047V9.43c0-3.007 1.792-4.669 4.533-4.669 1.312 0 2.686.235 2.686.235v2.953H15.83c-1.491 0-1.956.925-1.956 1.874v2.25h3.328l-.532 3.47h-2.796v8.385C19.612 23.027 24 18.062 24 12.073z"/></svg>
+          <span>Continue with Facebook</span>
+        </button>
+        <div class="auth-divider"><span>or</span></div>
+        <input class="auth-email-input" type="email" id="authEmail" placeholder="coach@example.com">
+        <input class="auth-email-input" type="password" id="authPassword" placeholder="Password" style="margin-top:8px;">
+        <button class="btn btn-primary" style="width:100%;padding:13px;font-size:15px;margin-top:8px;" onclick="handleEmailLogin()">Sign In →</button>
+        <div class="auth-note">New to AQUASTROKE? <span style="color:#60A5FA;cursor:pointer;" onclick="switchView('view-dashboard')">Try demo</span></div>
+      </div>
+      <div style="text-align:center;margin-top:16px;">
+        <button class="btn btn-ghost btn-sm" style="color:#475569;" onclick="switchView('view-landing')">← Back to site</button>
+      </div>
+    </div>
+  </div>
+</div><!-- /view-auth -->
+
+
+<!-- ════════════════════════════════════
+     VIEW: DASHBOARD
+════════════════════════════════════ -->
+<div class="view" id="view-dashboard">
+<div class="app">
+
+  <!-- SIDEBAR -->
+  <aside class="sidebar">
+    <div class="sb-logo">
+      <div class="sb-logo-mark"><svg viewBox="0 0 20 20" fill="none" width="18" height="18"><path d="M2 13 Q6 7 10 10 Q14 13 18 7" stroke="white" stroke-width="2.2" stroke-linecap="round"/></svg></div>
+      <span class="sb-logo-name">AQUASTROKE</span>
+    </div>
+    <nav class="sb-nav">
+      <div class="sb-section">COACH</div>
+      <button class="sb-item active" onclick="showPage('pg-overview')"><span class="sb-icon">📊</span> Overview</button>
+      <button class="sb-item" onclick="showPage('pg-season')"><span class="sb-icon">📋</span> Season Plan</button>
+      <button class="sb-item" onclick="showPage('pg-athletes')"><span class="sb-icon">🏊</span> Athletes <span class="sb-badge" id="sb-count">0</span></button>
+      <button class="sb-item" onclick="showPage('pg-trials')"><span class="sb-icon">🎯</span> Trial Results</button>
+      <button class="sb-item" onclick="showPage('pg-files')"><span class="sb-icon">📁</span> Files</button>
+      <div class="sb-section">ATHLETE</div>
+      <button class="sb-item" onclick="showPage('pg-athlete-view')"><span class="sb-icon">👤</span> Athlete View</button>
+      <div class="sb-section">ACCOUNT</div>
+      <button class="sb-item" onclick="showPage('pg-settings')"><span class="sb-icon">⚙️</span> Settings</button>
+      <button class="sb-item" onclick="switchView('view-landing')"><span class="sb-icon">🌐</span> Marketing Site</button>
+    </nav>
+    <div class="sb-footer">
+      <div class="sb-user">
+        <div class="sb-avatar">C</div>
+        <div><div class="sb-user-name">Coach Demo</div><div class="sb-user-plan">FREE Plan</div></div>
+      </div>
+    </div>
+  </aside>
+
+  <!-- MAIN -->
+  <div class="app-main">
+    <div class="topbar">
+      <div class="topbar-title" id="page-title">Overview</div>
+      <div class="topbar-actions" id="page-actions">
+        <button class="btn btn-primary btn-sm" onclick="openModal('modalAthlete')">+ Add Athlete</button>
+      </div>
+    </div>
+    <div class="content">
+
+      <!-- ── OVERVIEW ── -->
+      <div id="pg-overview" class="pg">
+        <div class="stat-grid">
+          <div class="stat-card">
+            <div class="stat-top"><div class="stat-ico" style="background:var(--brand-l)">🏊</div><span class="pill pill-blue" id="ov-ath-badge">0</span></div>
+            <div class="stat-val" id="ov-ath">0</div><div class="stat-lbl">Total Athletes</div>
+          </div>
+          <div class="stat-card">
+            <div class="stat-top"><div class="stat-ico" style="background:var(--teal-l)">📅</div><span class="pill pill-blue">SPP2</span></div>
+            <div class="stat-val">20</div><div class="stat-lbl">Current Week</div>
+          </div>
+          <div class="stat-card">
+            <div class="stat-top"><div class="stat-ico" style="background:var(--amber-l)">🎯</div><span class="pill pill-amber" id="ov-trials-badge">0</span></div>
+            <div class="stat-val" id="ov-trials">0</div><div class="stat-lbl">Trial Results</div>
+          </div>
+          <div class="stat-card">
+            <div class="stat-top"><div class="stat-ico" style="background:var(--green-l)">📈</div><span class="pill pill-green">3,600m</span></div>
+            <div class="stat-val">86%</div><div class="stat-lbl">Today's Intensity</div>
+          </div>
+        </div>
+        <div class="two-col">
+          <div class="card">
+            <div class="card-header"><div class="card-title">Athletes</div><button class="btn btn-ghost btn-sm" onclick="showPage('pg-athletes')">View all →</button></div>
+            <div class="card-body" id="ov-table"><div class="empty-state" style="padding:32px 0"><div class="empty-icon">🏊</div><div class="empty-title">No athletes yet</div><div class="empty-sub">Add your first athlete to get started</div><button class="btn btn-primary btn-sm" onclick="openModal('modalAthlete')">+ Add Athlete</button></div></div>
+          </div>
+          <div>
+            <div style="background:linear-gradient(135deg,var(--brand) 0%,#0041CC 100%);border-radius:var(--radius);padding:20px;color:white;margin-bottom:14px;">
+              <div style="font-size:10px;font-family:'SF Mono','Fira Code','Courier New',monospace;letter-spacing:2px;opacity:.7;text-transform:uppercase;margin-bottom:4px;">NEXT TRIAL</div>
+              <div style="font-size:17px;font-weight:800;margin-bottom:2px;">Trial #2 — Week 24</div>
+              <div style="font-size:13px;opacity:.7;margin-bottom:12px;">SPP2 · End of Specific Prep</div>
+              <div style="font-size:38px;font-weight:900;">4 <span style="font-size:15px;font-weight:400;opacity:.7">weeks</span></div>
+            </div>
+            <div class="card">
+              <div class="card-header"><div class="card-title">This Week · Week 20</div></div>
+              <div class="card-body">
+                <div style="margin-bottom:12px;padding-bottom:12px;border-bottom:1px solid var(--border);"><div style="font-size:13px;font-weight:700;margin-bottom:2px;">Monday — Free LSD + Pace</div><div style="font-size:12px;color:var(--text-3);">3,600m · 86% intensity · Snorkel + Paddles</div></div>
+                <div style="margin-bottom:12px;padding-bottom:12px;border-bottom:1px solid var(--border);"><div style="font-size:13px;font-weight:700;margin-bottom:2px;">Wednesday — Fly Volume</div><div style="font-size:12px;color:var(--text-3);">3,200m · 85% intensity · Fins</div></div>
+                <div><div style="font-size:13px;font-weight:700;margin-bottom:2px;">Friday — IM Long</div><div style="font-size:12px;color:var(--text-3);">3,600m · 87% intensity · Paddles</div></div>
+              </div>
+            </div>
+          </div>
+        </div>
+      </div>
+
+      <!-- ── SEASON PLAN ── -->
+      <div id="pg-season" class="pg" style="display:none">
+        <div class="season-phase-bar">
+          <div class="phase-chip" style="background:#EFF6FF" onclick="setPhase(this,'GPP')"><div class="phase-chip-name" style="color:var(--text-3)">GPP</div><div class="phase-chip-weeks">1–8</div><div class="phase-chip-lbl">General Prep</div></div>
+          <div class="phase-chip current" style="background:#EFF6FF" onclick="setPhase(this,'SPP1')"><div class="phase-chip-name" style="color:var(--brand)">SPP1</div><div class="phase-chip-weeks">9–16</div><div class="phase-chip-lbl">Specific Prep 1</div></div>
+          <div class="phase-chip" style="background:#E0F2FE" onclick="setPhase(this,'SPP2')"><div class="phase-chip-name" style="color:var(--teal)">SPP2</div><div class="phase-chip-weeks">17–24</div><div class="phase-chip-lbl">Specific Prep 2</div></div>
+          <div class="phase-chip" style="background:var(--amber-l)" onclick="setPhase(this,'COMP')"><div class="phase-chip-name" style="color:var(--amber)">COMP</div><div class="phase-chip-weeks">25–32</div><div class="phase-chip-lbl">Competition</div></div>
+          <div class="phase-chip" style="background:var(--green-l)" onclick="setPhase(this,'TAPER')"><div class="phase-chip-name" style="color:var(--green)">TAPER</div><div class="phase-chip-weeks">33–35</div><div class="phase-chip-lbl">Taper</div></div>
+          <div class="phase-chip" style="background:var(--ocean);color:white" onclick="setPhase(this,'CHAMP')"><div class="phase-chip-name" style="color:#60A5FA">CHAMP</div><div class="phase-chip-weeks" style="color:white">36</div><div class="phase-chip-lbl" style="color:#475569">Championship</div></div>
+        </div>
+        <div class="two-col">
+          <div class="card">
+            <div class="card-header"><div class="card-title">Modify Weekly Volume</div><button class="btn btn-primary btn-sm" onclick="showToast('✓ Volume targets saved','success')">Save Changes</button></div>
+            <div class="card-body">
+              <div style="margin-bottom:16px;font-size:13px;color:var(--text-2);">Drag sliders to adjust target volume per phase. Changes affect all athletes in the season plan.</div>
+              <div class="vol-row"><span class="vol-phase">GPP</span><input type="range" class="vol-slider" min="1500" max="3000" value="2200" oninput="this.nextElementSibling.textContent=this.value+'m'"><span class="vol-num">2,200m</span></div>
+              <div class="vol-row"><span class="vol-phase">SPP1</span><input type="range" class="vol-slider" min="2000" max="3500" value="3000" oninput="this.nextElementSibling.textContent=this.value+'m'"><span class="vol-num">3,000m</span></div>
+              <div class="vol-row"><span class="vol-phase">SPP2</span><input type="range" class="vol-slider" min="2500" max="4000" value="3600" oninput="this.nextElementSibling.textContent=this.value+'m'"><span class="vol-num">3,600m</span></div>
+              <div class="vol-row"><span class="vol-phase">COMP</span><input type="range" class="vol-slider" min="2000" max="3500" value="3000" oninput="this.nextElementSibling.textContent=this.value+'m'"><span class="vol-num">3,000m</span></div>
+              <div class="vol-row"><span class="vol-phase">TAPER</span><input type="range" class="vol-slider" min="1000" max="2500" value="1800" oninput="this.nextElementSibling.textContent=this.value+'m'"><span class="vol-num">1,800m</span></div>
+            </div>
+          </div>
+          <div class="card">
+            <div class="card-header"><div class="card-title">Week 20 — SPP2</div></div>
+            <div class="card-body" style="overflow-x:auto">
+              <table class="data-table">
+                <thead><tr><th>Day</th><th>Focus</th><th>Volume</th><th>Int.</th></tr></thead>
+                <tbody>
+                  <tr><td><strong>Mon</strong></td><td>Free LSD + Pace</td><td>3,600m</td><td><span class="pill pill-blue">86%</span></td></tr>
+                  <tr><td><strong>Tue</strong></td><td>Dry Land — Core</td><td>60 min</td><td><span class="pill pill-amber">Gym</span></td></tr>
+                  <tr><td><strong>Wed</strong></td><td>Fly Volume</td><td>3,200m</td><td><span class="pill pill-blue">85%</span></td></tr>
+                  <tr><td><strong>Thu</strong></td><td>Recovery</td><td>2,000m</td><td><span class="pill pill-green">60%</span></td></tr>
+                  <tr><td><strong>Fri</strong></td><td>IM Long</td><td>3,600m</td><td><span class="pill pill-amber">87%</span></td></tr>
+                  <tr><td><strong>Sat</strong></td><td>Sprint Tech.</td><td>2,800m</td><td><span class="pill pill-blue">88%</span></td></tr>
+                  <tr><td><strong>Sun</strong></td><td style="color:var(--text-3)">Full Rest</td><td>—</td><td><span class="pill pill-gray">REST</span></td></tr>
+                </tbody>
+              </table>
+            </div>
+          </div>
+        </div>
+      </div>
+
+      <!-- ── ATHLETES ── -->
+      <div id="pg-athletes" class="pg" style="display:none">
+        <div style="display:flex;align-items:center;justify-content:space-between;margin-bottom:18px;flex-wrap:wrap;gap:10px;">
+          <div><div style="font-size:22px;font-weight:900;">Athletes</div><div style="font-size:14px;color:var(--text-3);">Manage your roster and track performance</div></div>
+          <div style="display:flex;gap:8px;flex-wrap:wrap;">
+            <input class="form-input" style="width:180px;padding:8px 12px;" placeholder="Search..." oninput="filterAthletes(this.value)">
+            <button class="btn btn-outline btn-sm" onclick="exportExcel()">⬇ Excel</button>
+            <button class="btn btn-primary btn-sm" onclick="openModal('modalAthlete')">+ Add Athlete</button>
+          </div>
+        </div>
+        <div id="athletes-container"><div class="empty-state"><div class="empty-icon">🏊</div><div class="empty-title">No athletes yet</div><div class="empty-sub">Start building your roster</div><button class="btn btn-primary btn-sm" onclick="openModal('modalAthlete')">+ Add First Athlete</button></div></div>
+      </div>
+
+      <!-- ── ATHLETE DETAIL ── -->
+      <div id="pg-athlete-detail" class="pg" style="display:none">
+        <div style="display:flex;align-items:center;gap:12px;margin-bottom:20px;flex-wrap:wrap;">
+          <button class="btn btn-outline btn-sm" onclick="showPage('pg-athletes')">← Back</button>
+          <div id="det-avatar" style="width:44px;height:44px;border-radius:11px;background:var(--brand-l);display:flex;align-items:center;justify-content:center;font-size:16px;font-weight:800;color:var(--brand);"></div>
+          <div><div id="det-name" style="font-size:20px;font-weight:900;"></div><div id="det-meta" style="font-size:13px;color:var(--text-3);"></div></div>
+          <div style="margin-left:auto;display:flex;gap:8px;flex-wrap:wrap;">
+            <button class="btn btn-outline btn-sm" onclick="openModal('modalResult')">+ Record Result</button>
+            <button class="btn btn-outline btn-sm" onclick="generatePDF()">📄 PDF Report</button>
+            <button class="btn btn-danger btn-sm" onclick="deleteAthlete()">Delete</button>
+          </div>
+        </div>
+        <div class="three-col" id="det-trials"></div>
+        <div class="card" style="margin-top:14px;">
+          <div class="card-header"><div class="card-title">KPI Summary</div><span id="det-kpi-status" style="font-size:12px;color:var(--text-3)"></span></div>
+          <div class="card-body" id="det-kpi"></div>
+        </div>
+        <div class="card" style="margin-top:14px;">
+          <div class="card-header"><div class="card-title">Performance Chart — Trial Times</div></div>
+          <div class="card-body"><div class="chart-wrap" id="det-chart"><svg class="chart-svg" viewBox="0 0 400 180"><text x="200" y="90" text-anchor="middle" fill="#94A3B8" font-size="14" font-family="system-ui">Add trial results to see chart</text></svg></div></div>
+        </div>
+      </div>
+
+      <!-- ── TRIALS PAGE ── -->
+      <div id="pg-trials" class="pg" style="display:none">
+        <div style="display:flex;align-items:center;justify-content:space-between;margin-bottom:18px;flex-wrap:wrap;gap:10px;">
+          <div><div style="font-size:22px;font-weight:900;">Trial Results</div><div style="font-size:14px;color:var(--text-3);">Enter and review official trial performance</div></div>
+          <div style="display:flex;gap:8px;">
+            <button class="btn btn-outline btn-sm" onclick="exportExcel()">⬇ Export Excel</button>
+            <button class="btn btn-primary btn-sm" onclick="openModal('modalResult')">+ Record Result</button>
+          </div>
+        </div>
+        <!-- Auto-Adapt -->
+        <div class="card" style="margin-bottom:14px;">
+          <div class="card-header"><div class="card-title">Auto-Adapt Plan</div><span class="pill pill-blue">AI-Assisted</span></div>
+          <div class="card-body">
+            <div style="font-size:14px;color:var(--text-2);margin-bottom:16px;">After entering all trial results, click below to automatically adjust the remaining season plan based on each athlete's gap percentage. Weeks, volume, and intensity are recalculated.</div>
+            <button class="adapt-btn" id="adaptBtn" onclick="runAdapt()">⚡ Auto-Adapt Season Plan</button>
+            <div id="adapt-result" style="margin-top:12px;display:none;"></div>
+          </div>
+        </div>
+        <div class="card" style="margin-bottom:14px;">
+          <div class="card-header"><div class="card-title">Attendance Compliance</div><span style="font-size:12px;color:var(--text-3)">Last 4 weeks rolling</span></div>
+          <div class="card-body" id="attendance-table">
+            <div style="font-size:13px;color:var(--text-3);font-style:italic">Update attendance weekly via athlete profile settings. Compliance below 80% predicts performance gaps.</div>
+            <div style="margin-top:12px;display:flex;gap:10px;flex-wrap:wrap" id="attendance-bars"></div>
+          </div>
+        </div>
+        <div class="card">
+          <div class="card-header"><div class="card-title">All Trial Results</div></div>
+          <div class="card-body" id="trials-table">
+            <div class="empty-state" style="padding:28px 0"><div class="empty-icon">🎯</div><div class="empty-title">No results recorded</div><div class="empty-sub">Add athletes first, then record trial results</div></div>
+          </div>
+        </div>
+      </div>
+
+      <!-- ── ATHLETE VIEW ── -->
+      <div id="pg-athlete-view" class="pg" style="display:none">
+        <div style="display:flex;align-items:center;justify-content:space-between;margin-bottom:18px;">
+          <div><div style="font-size:22px;font-weight:900;">Athlete View</div><div style="font-size:14px;color:var(--text-3);">What your athlete sees on their device</div></div>
+          <select class="form-select" style="width:200px;" onchange="setAthleteView(this.value)" id="av-select"><option value="">Select athlete...</option></select>
+        </div>
+        <div style="max-width:400px;">
+          <div class="today-session">
+            <div class="ts-label">Today's Session</div>
+            <div class="ts-phase">Week 20 · SPP2 · Wednesday</div>
+            <div class="ts-main">Fly Volume</div>
+            <div class="ts-meta">Snorkel · Kickboard · Fins</div>
+            <div class="ts-blocks">
+              <div class="ts-block"><div class="ts-block-val">3,200m</div><div class="ts-block-lbl">Volume</div></div>
+              <div class="ts-block"><div class="ts-block-val">85%</div><div class="ts-block-lbl">Intensity</div></div>
+              <div class="ts-block"><div class="ts-block-val">30s</div><div class="ts-block-lbl">Rest</div></div>
+            </div>
+          </div>
+          <div class="card" style="margin-bottom:12px;">
+            <div class="card-header"><div class="card-title">Weekly Target</div></div>
+            <div class="card-body">
+              <div style="display:flex;justify-content:space-between;margin-bottom:8px;font-size:14px;"><span style="color:var(--text-2)">Volume this week</span><span style="font-weight:700">18,200m</span></div>
+              <div style="height:6px;background:var(--border);border-radius:3px;overflow:hidden;"><div style="width:58%;height:100%;background:var(--brand);border-radius:3px;"></div></div>
+              <div style="font-size:12px;color:var(--text-3);margin-top:6px;">3 of 6 sessions completed</div>
+            </div>
+          </div>
+          <div class="card">
+            <div class="card-header"><div class="card-title">Trial Progress</div></div>
+            <div class="card-body">
+              <div id="av-trials">
+                <div class="trial-compare">
+                  <div class="tc-box active"><div class="tc-num">Trial 1</div><div class="tc-val">—</div><div class="tc-target">Week 16 · SPP1</div></div>
+                  <div class="tc-box"><div class="tc-num">Trial 2</div><div class="tc-val">—</div><div class="tc-target">Week 24 · SPP2</div></div>
+                  <div class="tc-box"><div class="tc-num">Trial 3</div><div class="tc-val">—</div><div class="tc-target">Week 31 · COMP</div></div>
+                </div>
+              </div>
+            </div>
+          </div>
+        </div>
+      </div>
+
+      <!-- ── FILES ── -->
+      <div id="pg-files" class="pg" style="display:none">
+        <div style="font-size:22px;font-weight:900;margin-bottom:4px;">Files</div>
+        <div style="font-size:14px;color:var(--text-3);margin-bottom:18px;">Upload and download training files and results</div>
+        <div style="display:grid;grid-template-columns:1fr 1fr;gap:14px;">
+          <div class="card">
+            <div class="card-header"><div class="card-title">Upload File</div></div>
+            <div class="card-body">
+              <div class="upload-zone" id="uploadZone" onclick="document.getElementById('fileInput').click()" ondragover="event.preventDefault();this.classList.add('over')" ondragleave="this.classList.remove('over')" ondrop="handleDrop(event)">
+                <div style="font-size:32px;margin-bottom:8px;">📤</div>
+                <div style="font-size:15px;font-weight:700;margin-bottom:4px;">Drag file here or click</div>
+                <div style="font-size:13px;color:var(--text-3);">Excel · PDF · Word · CSV — max 10MB</div>
+              </div>
+              <input type="file" id="fileInput" style="display:none" accept=".xlsx,.xls,.csv,.pdf,.doc,.docx" onchange="handleUpload(this.files)">
+            </div>
+          </div>
+          <div class="card">
+            <div class="card-header"><div class="card-title">Uploaded Files</div></div>
+            <div class="card-body" id="file-list">
+              <div style="text-align:center;padding:28px;color:var(--text-3);"><div style="font-size:28px;margin-bottom:6px;">📂</div><div style="font-size:14px;">No files yet</div></div>
+            </div>
+          </div>
+        </div>
+      </div>
+
+      <!-- ── SETTINGS ── -->
+      <div id="pg-settings" class="pg" style="display:none">
+        <div style="font-size:22px;font-weight:900;margin-bottom:18px;">Settings</div>
+        <div style="display:grid;grid-template-columns:1fr 1fr;gap:14px;">
+          <div class="card">
+            <div class="card-header"><div class="card-title">Academy</div></div>
+            <div class="card-body">
+              <div class="form-group"><label class="form-label">Academy Name</label><input class="form-input" value="Best Aquatics Academy"></div>
+              <div class="form-group"><label class="form-label">Current Season</label><input class="form-input" value="2025/2026"></div>
+              <button class="btn btn-primary btn-sm" onclick="showToast('✓ Settings saved','success')">Save</button>
+            </div>
+          </div>
+          <div class="card">
+            <div class="card-header"><div class="card-title">Plan &amp; Billing</div></div>
+            <div class="card-body">
+              <div style="display:flex;justify-content:space-between;align-items:center;margin-bottom:12px;padding-bottom:12px;border-bottom:1px solid var(--border);"><span style="font-size:14px;color:var(--text-2)">Current Plan</span><span class="pill pill-blue">FREE</span></div>
+              <div style="display:flex;justify-content:space-between;align-items:center;margin-bottom:16px;"><span style="font-size:14px;color:var(--text-2)">Athletes used</span><span id="s-count" style="font-size:14px;font-weight:700">0 / 5</span></div>
+              <button class="btn btn-primary" style="width:100%" onclick="showToast('Coming soon!','success')">Upgrade to COACH — $29/mo</button>
+            </div>
+          </div>
+          <div class="card">
+            <div class="card-header"><div class="card-title">Notifications</div></div>
+            <div class="card-body">
+              <div style="display:flex;justify-content:space-between;align-items:center;margin-bottom:14px;"><span style="font-size:14px;color:var(--text-2)">Trial reminders</span><label class="toggle"><input type="checkbox" checked><div class="toggle-slider"></div></label></div>
+              <div style="display:flex;justify-content:space-between;align-items:center;margin-bottom:14px;"><span style="font-size:14px;color:var(--text-2)">Weekly report</span><label class="toggle"><input type="checkbox"><div class="toggle-slider"></div></label></div>
+              <div style="display:flex;justify-content:space-between;align-items:center;"><span style="font-size:14px;color:var(--text-2)">Email notifications</span><label class="toggle"><input type="checkbox" checked><div class="toggle-slider"></div></label></div>
+            </div>
+          </div>
+          <div class="card">
+            <div class="card-header"><div class="card-title">Account</div></div>
+            <div class="card-body">
+              <div style="display:flex;align-items:center;gap:12px;margin-bottom:16px;"><div class="sb-avatar" style="width:40px;height:40px;font-size:15px;">C</div><div><div style="font-weight:700;">Coach Demo</div><div style="font-size:13px;color:var(--text-3);">coach@example.com</div></div></div>
+              <button class="btn btn-outline btn-sm" onclick="switchView('view-auth')">Sign Out</button>
+            </div>
+          </div>
+        </div>
+      </div>
+
+    </div><!-- /content -->
+  </div><!-- /app-main -->
+</div><!-- /app -->
+</div><!-- /view-dashboard -->
+
+
+<script>
+// ═══════════════════════════════════════
+// STATE
+// ═══════════════════════════════════════
+const S = {
+  athletes: [],
+  files: [],
+  current: null,
+};
+
+// ═══════════════════════════════════════
+// VIEW & PAGE ROUTING
+// ═══════════════════════════════════════
+function switchView(id) {
+  document.querySelectorAll('.view').forEach(v => v.classList.remove('active'));
+  document.getElementById(id).classList.add('active');
+  if(id === 'view-landing') { window.scrollTo(0,0); initReveal(); }
+}
+function switchTo(section) {
+  if(section === 'auth') switchView('view-auth');
+  else if(section === 'dashboard') switchView('view-dashboard');
+}
+function scrollTo(id) {
+  const el = document.getElementById(id);
+  if(el) el.scrollIntoView({behavior:'smooth'});
+}
+
+const PAGE_TITLES = {
+  'pg-overview':'Overview','pg-season':'Season Plan','pg-athletes':'Athletes',
+  'pg-trials':'Trial Results','pg-athlete-view':'Athlete View',
+  'pg-files':'Files','pg-settings':'Settings','pg-athlete-detail':'Athlete Detail'
+};
+function showPage(id) {
+  document.querySelectorAll('.pg').forEach(p => p.style.display = 'none');
+  document.getElementById(id).style.display = 'block';
+  document.getElementById('page-title').textContent = PAGE_TITLES[id] || '';
+  document.querySelectorAll('.sb-item').forEach(b => b.classList.remove('active'));
+  document.querySelectorAll('.sb-item').forEach(b => {
+    if(b.textContent.trim().startsWith(PAGE_TITLES[id]?.split(' ')[0])) b.classList.add('active');
+  });
+  if(id==='pg-overview') renderOverview();
+  if(id==='pg-athletes') renderAthletes();
+  if(id==='pg-trials') renderTrialsPage();
+  if(id==='pg-athlete-view') renderAthleteView();
+}
+
+// ═══════════════════════════════════════
+// MODAL
+// ═══════════════════════════════════════
+function openModal(id) { document.getElementById(id).classList.add('open'); }
+function closeModal(id) { document.getElementById(id).classList.remove('open'); }
+document.querySelectorAll('.modal-overlay').forEach(m => m.addEventListener('click', e => { if(e.target===m) m.classList.remove('open'); }));
+
+// ═══════════════════════════════════════
+// ATHLETES
+// ═══════════════════════════════════════
+async function saveAthlete() {
+  const name = document.getElementById('f-name').value.trim();
+  const event = document.getElementById('f-event').value;
+  if(!name||!event) { showToast('Name and event are required','error'); return; }
+  const __ath = {
+    id: Date.now(), name, event,
+    category: document.getElementById('f-category').value || 'Sprint',
+    dob: document.getElementById('f-dob').value,
+    notes: document.getElementById('f-notes').value,
+    targets: {
+      t1: parseFloat(document.getElementById('f-t1').value)||null,
+      t2: parseFloat(document.getElementById('f-t2').value)||null,
+      t3: parseFloat(document.getElementById('f-t3').value)||null,
+    },
+    results: {t1:null,t2:null,t3:null},
+    attendance: { planned:0, attended:0 },
+    added: new Date().toLocaleDateString('en-GB',{day:'2-digit',month:'short',year:'numeric'})
+  };
+  S.athletes.push(__ath);
+  if (window.AQ?.isBackendMode()) {
+    try {
+      const saved = await window.AQ.Athletes.create({ name, event, category:__ath.category, dob:__ath.dob||null, notes:__ath.notes||null, targets:__ath.targets });
+      if (saved?.id) __ath.id = saved.id;
+    } catch(e) { console.warn('Backend sync:', e.message); }
+  }
+  ['f-name','f-dob','f-t1','f-t2','f-t3','f-notes'].forEach(id=>document.getElementById(id).value='');
+  document.getElementById('f-event').value='';
+  document.getElementById('f-category').value='Sprint';
+  closeModal('modalAthlete');
+  showToast('✓ Athlete added','success');
+  updateCounts();
+  renderOverview(); renderAthletes(); renderAthleteView();
+}
+
+function deleteAthlete() {
+  if(!S.current) return;
+  if(!confirm('Delete this athlete permanently?')) return;
+  S.athletes = S.athletes.filter(a=>a.id!==S.current.id);
+  S.current = null;
+  updateCounts(); showToast('Athlete deleted','error');
+  showPage('pg-athletes');
+}
+
+function updateCounts() {
+  const n = S.athletes.length;
+  document.getElementById('sb-count').textContent = n;
+  document.getElementById('ov-ath').textContent = n;
+  document.getElementById('ov-ath-badge').textContent = n;
+  let t=0; S.athletes.forEach(a=>{if(a.results.t1)t++;if(a.results.t2)t++;if(a.results.t3)t++;});
+  document.getElementById('ov-trials').textContent = t;
+  document.getElementById('ov-trials-badge').textContent = t;
+  document.getElementById('s-count').textContent = n+' / 5';
+}
+
+function filterAthletes(q) { renderAthletes(q); }
+
+function renderAthletes(q='') {
+  const cont = document.getElementById('athletes-container');
+  let list = S.athletes;
+  if(q) list = list.filter(a=>a.name.toLowerCase().includes(q.toLowerCase()));
+  if(!list.length) {
+    cont.innerHTML = `<div class="empty-state"><div class="empty-icon">🏊</div><div class="empty-title">${q?'No results':'No athletes yet'}</div><div class="empty-sub">${q?'Try a different search':'Add your first athlete to get started'}</div>${!q?'<button class="btn btn-primary btn-sm" onclick="openModal(\'modalAthlete\')">+ Add Athlete</button>':''}</div>`;
+    return;
+  }
+  cont.innerHTML = `<table class="data-table"><thead><tr><th>Athlete</th><th>Event</th><th>Trial 1</th><th>Trial 2</th><th>Trial 3</th><th>Added</th></tr></thead><tbody>${list.map(a=>`
+    <tr onclick="openAthlete(${a.id})">
+      <td><div class="ath-cell"><div class="ath-av">${a.name.split(' ').map(w=>w[0]).join('').slice(0,2)}</div><div><div class="ath-nm">${a.name}</div></div></div></td>
+      <td><div class="ath-ev">${a.event}</div></td>
+      <td>${trialPill(a,1)}</td><td>${trialPill(a,2)}</td><td>${trialPill(a,3)}</td>
+      <td style="color:var(--text-3);font-size:12px">${a.added}</td>
+    </tr>`).join('')}</tbody></table>`;
+}
+
+function trialPill(a,n) {
+  const r=a.results['t'+n], tgt=a.targets['t'+n];
+  if(!r) return `<span class="pill pill-gray">—</span>`;
+  if(!tgt) return `<span class="pill pill-blue">${r.actual}s</span>`;
+  const g=((r.actual-tgt)/tgt*100).toFixed(1);
+  return `<span class="pill ${parseFloat(g)<=0?'pill-green':'pill-red'}">${r.actual}s (${parseFloat(g)>0?'+':''}${g}%)</span>`;
+}
+
+function renderOverview() {
+  updateCounts();
+  const tbl = document.getElementById('ov-table');
+  if(!S.athletes.length) { tbl.innerHTML='<div class="empty-state" style="padding:32px 0"><div class="empty-icon">🏊</div><div class="empty-title">No athletes yet</div><div class="empty-sub">Add your first athlete</div><button class="btn btn-primary btn-sm" onclick="openModal(\'modalAthlete\')">+ Add Athlete</button></div>'; return; }
+  const recent = S.athletes.slice(-4).reverse();
+  tbl.innerHTML=`<table class="data-table"><thead><tr><th>Athlete</th><th>Event</th><th>T1</th><th>T2</th><th>T3</th></tr></thead><tbody>${recent.map(a=>`
+    <tr onclick="openAthlete(${a.id})">
+      <td><div class="ath-cell"><div class="ath-av">${a.name.split(' ').map(w=>w[0]).join('').slice(0,2)}</div><div class="ath-nm">${a.name}</div></div></td>
+      <td><div class="ath-ev">${a.event}</div></td>
+      <td>${trialPill(a,1)}</td><td>${trialPill(a,2)}</td><td>${trialPill(a,3)}</td>
+    </tr>`).join('')}</tbody></table>`;
+}
+
+function openAthlete(id) {
+  S.current = S.athletes.find(a=>a.id===id);
+  if(!S.current) return;
+  const a = S.current;
+  const init = a.name.split(' ').map(w=>w[0]).join('').slice(0,2);
+  document.getElementById('det-avatar').textContent = init;
+  document.getElementById('det-name').textContent = a.name;
+  document.getElementById('det-meta').textContent = a.event + (a.dob?' · DOB: '+a.dob:'');
+  document.getElementById('mResultTitle').textContent = 'Record Result — '+a.name;
+  renderTrialCards();
+  renderChart();
+  renderKPIs();
+  showPage('pg-athlete-detail');
+}
+
+function renderTrialCards() {
+  const a = S.current; if(!a) return;
+  const weeks = [16,24,31], phases = ['SPP1','SPP2','COMP'];
+  document.getElementById('det-trials').innerHTML = [1,2,3].map(n=>{
+    const r=a.results['t'+n], tgt=a.targets['t'+n];
+    const week=weeks[n-1], phase=phases[n-1];
+    let inner='';
+    if(r&&tgt){
+      const g=((r.actual-tgt)/tgt*100).toFixed(1);
+      const good=parseFloat(g)<=0;
+      const adapt = getAdaptRecommendation(parseFloat(g), r.rpe, r.context, a.category);
+      const rpeColor = !r.rpe?'var(--text-3)':r.rpe>=8?'var(--red)':r.rpe>=5?'var(--amber)':'var(--green)';
+      inner=`
+        <div style="display:flex;justify-content:space-between;margin-bottom:5px;font-size:13px"><span style="color:var(--text-3)">Target</span><span style="font-weight:700">${tgt}s</span></div>
+        <div style="display:flex;justify-content:space-between;margin-bottom:5px;font-size:13px"><span style="color:var(--text-3)">Actual</span><span style="font-weight:700;color:${good?'var(--green)':'var(--red)'}">${r.actual}s</span></div>
+        <div class="tc-gap ${good?'good':'bad'}" style="margin-bottom:8px">${parseFloat(g)>0?'+':''}${g}% ${good?'✓ Met':'↑ Improve'}</div>
+        <div style="display:flex;gap:6px;flex-wrap:wrap;margin-bottom:8px">
+          ${r.rpe?`<span style="background:#F1F5F9;border-radius:6px;padding:2px 7px;font-size:11px;font-weight:700;color:${rpeColor}">RPE ${r.rpe}</span>`:''}
+          ${r.context&&r.context!=='Normal'?`<span style="background:#FEF9EE;border-radius:6px;padding:2px 7px;font-size:11px;font-weight:700;color:var(--amber)">${r.context}</span>`:''}
+          ${r.strokeRate?`<span style="background:#EEF3FF;border-radius:6px;padding:2px 7px;font-size:11px;font-weight:700;color:var(--brand)">${r.strokeRate} cyc/min</span>`:''}
+        </div>
+        <div style="background:#F8FAFC;border-left:3px solid ${good?'var(--green)':parseFloat(g)<7?'var(--amber)':'var(--red)'};border-radius:0 6px 6px 0;padding:7px 10px;font-size:11px;color:var(--text-2);line-height:1.5">${adapt}</div>`;
+    } else if(tgt){inner=`<div style="font-size:13px;color:var(--text-3);margin-bottom:8px">Target: ${tgt}s</div><button class="btn btn-outline btn-sm" onclick="openModal('modalResult')">+ Record</button>`;}
+    else{inner=`<div style="font-size:12px;color:var(--text-3);font-style:italic">No target set</div><button class="btn btn-outline btn-sm" onclick="openModal('modalResult')" style="margin-top:8px">+ Record</button>`;}
+    return `<div class="tc-box ${r?'active':''}"><div class="tc-num">Trial ${n}</div><div style="font-size:11px;color:var(--text-3);margin-bottom:10px">Week ${week} · ${phase}</div>${inner}</div>`;
+  }).join('');
+}
+
+function renderChart() {
+  const a = S.current; if(!a) return;
+  const results = [1,2,3].map(n=>({n, r:a.results['t'+n], tgt:a.targets['t'+n]})).filter(x=>x.r);
+  const cont = document.getElementById('det-chart');
+  if(results.length<1){cont.innerHTML='<svg class="chart-svg" viewBox="0 0 400 180"><text x="200" y="90" text-anchor="middle" fill="#94A3B8" font-size="14" font-family="system-ui">Add trial results to see chart</text></svg>';return;}
+  const vals = results.map(x=>x.r.actual);
+  const tgts = results.filter(x=>x.tgt).map(x=>({n:x.n,val:x.tgt}));
+  const mn = Math.min(...vals,...tgts.map(t=>t.val))-2;
+  const mx = Math.max(...vals,...tgts.map(t=>t.val))+2;
+  const W=380,H=150,pad=10;
+  const xPos = n => pad + (n-1)*(W/(2));
+  const yPos = v => H - pad - ((v-mn)/(mx-mn))*(H-2*pad);
+  const pts = results.map(x=>({x:xPos(x.n),y:yPos(x.r.actual),n:x.n,v:x.r.actual}));
+  let svg=`<svg class="chart-svg" viewBox="0 0 400 180" xmlns="http://www.w3.org/2000/svg">`;
+  // grid
+  for(let i=0;i<=4;i++){const y=10+i*34;svg+=`<line x1="5" y1="${y}" x2="395" y2="${y}" stroke="#E4E9F0" stroke-width="1"/>`;}
+  // target line
+  if(tgts.length>1){const tp=tgts.map(t=>({x:xPos(t.n),y:yPos(t.val)}));svg+=`<polyline points="${tp.map(p=>p.x+','+p.y).join(' ')}" fill="none" stroke="#D97706" stroke-width="1.5" stroke-dasharray="4,3"/>`;}
+  // actual line
+  if(pts.length>1) svg+=`<polyline points="${pts.map(p=>p.x+','+p.y).join(' ')}" fill="none" stroke="var(--brand)" stroke-width="2.5"/>`;
+  // dots + labels
+  pts.forEach(p=>{svg+=`<circle cx="${p.x}" cy="${p.y}" r="5" fill="var(--brand)"/><text x="${p.x}" y="${p.y-10}" text-anchor="middle" fill="#0A1628" font-size="11" font-weight="700" font-family="system-ui">${p.v}s</text><text x="${p.x}" y="170" text-anchor="middle" fill="#94A3B8" font-size="11" font-family="system-ui">T${p.n}</text>`;});
+  if(tgts.length)svg+=`<text x="340" y="20" fill="#D97706" font-size="10" font-family="system-ui">- - Target</text><text x="340" y="34" fill="var(--brand)" font-size="10" font-family="system-ui">— Actual</text>`;
+  svg+='</svg>';
+  cont.innerHTML=svg;
+}
+
+function renderKPIs() {
+  const a = S.current; if(!a) return;
+  const cont = document.getElementById('det-kpi');
+  const status = document.getElementById('det-kpi-status');
+  if(!cont) return;
+
+  // Gather data across all trials
+  const trials = [1,2,3].map(n=>({ n, r:a.results['t'+n], tgt:a.targets['t'+n] })).filter(x=>x.r);
+  if(!trials.length) { cont.innerHTML='<div style="color:var(--text-3);font-size:13px;font-style:italic;padding:8px 0">Record trial results to see KPI analysis.</div>'; return; }
+
+  const hasRPE = trials.some(t=>t.r.rpe);
+  const hasSR  = trials.some(t=>t.r.strokeRate);
+  status.textContent = hasRPE && hasSR ? 'Full data' : 'Partial — add RPE & stroke rate';
+  status.style.color = hasRPE && hasSR ? 'var(--green)' : 'var(--amber)';
+
+  // KPI 1: Trial Time Gap
+  const gapHtml = trials.map(t=>{
+    if(!t.tgt) return '';
+    const g = ((t.r.actual-t.tgt)/t.tgt*100).toFixed(1);
+    const col = parseFloat(g)<=0?'var(--green)':parseFloat(g)<=5?'var(--amber)':'var(--red)';
+    return `<div style="display:flex;align-items:center;gap:8px;margin-bottom:4px">
+      <span style="font-size:11px;color:var(--text-3);min-width:20px">T${t.n}</span>
+      <div style="flex:1;height:6px;background:var(--border);border-radius:3px;overflow:hidden">
+        <div style="width:${Math.min(Math.abs(parseFloat(g))*10,100)}%;height:100%;background:${col};border-radius:3px"></div>
+      </div>
+      <span style="font-size:12px;font-weight:700;color:${col};min-width:44px;text-align:right">${parseFloat(g)>0?'+':''}${g}%</span>
+    </div>`;
+  }).join('');
+
+  // KPI 2: RPE trend
+  const rpeHtml = trials.filter(t=>t.r.rpe).map(t=>{
+    const col = t.r.rpe>=8?'var(--red)':t.r.rpe>=5?'var(--amber)':'var(--green)';
+    return `<div style="display:flex;align-items:center;gap:8px;margin-bottom:4px">
+      <span style="font-size:11px;color:var(--text-3);min-width:20px">T${t.n}</span>
+      <div style="flex:1;height:6px;background:var(--border);border-radius:3px;overflow:hidden">
+        <div style="width:${t.r.rpe*10}%;height:100%;background:${col};border-radius:3px"></div>
+      </div>
+      <span style="font-size:12px;font-weight:700;color:${col};min-width:44px;text-align:right">RPE ${t.r.rpe}</span>
+    </div>`;
+  }).join('') || '<div style="font-size:12px;color:var(--text-3);font-style:italic">Not recorded — enter RPE when saving results</div>';
+
+  // KPI 3: Stroke Rate
+  const srHtml = trials.filter(t=>t.r.strokeRate).map(t=>{
+    return `<div style="display:flex;align-items:center;gap:8px;margin-bottom:4px">
+      <span style="font-size:11px;color:var(--text-3);min-width:20px">T${t.n}</span>
+      <div style="flex:1;height:6px;background:var(--border);border-radius:3px;overflow:hidden">
+        <div style="width:${Math.min(t.r.strokeRate*1.5,100)}%;height:100%;background:var(--brand);border-radius:3px"></div>
+      </div>
+      <span style="font-size:12px;font-weight:700;color:var(--brand);min-width:44px;text-align:right">${t.r.strokeRate} c/m</span>
+    </div>`;
+  }).join('') || '<div style="font-size:12px;color:var(--text-3);font-style:italic">Not recorded — enter stroke rate when saving results</div>';
+
+  // Context flags
+  const contexts = trials.filter(t=>t.r.context&&t.r.context!=='Normal').map(t=>
+    `<span style="background:#FEF9EE;border:1px solid var(--amber);border-radius:6px;padding:2px 8px;font-size:11px;font-weight:700;color:var(--amber)">T${t.n}: ${t.r.context}</span>`
+  ).join(' ');
+
+  cont.innerHTML = `
+    <div style="display:grid;grid-template-columns:1fr 1fr 1fr;gap:16px">
+      <div>
+        <div style="font-size:11px;font-weight:700;color:var(--text-3);text-transform:uppercase;letter-spacing:.5px;margin-bottom:10px">Time Gap %</div>
+        ${gapHtml||'<div style="font-size:12px;color:var(--text-3);font-style:italic">No targets set</div>'}
+      </div>
+      <div>
+        <div style="font-size:11px;font-weight:700;color:var(--text-3);text-transform:uppercase;letter-spacing:.5px;margin-bottom:10px">RPE</div>
+        ${rpeHtml}
+      </div>
+      <div>
+        <div style="font-size:11px;font-weight:700;color:var(--text-3);text-transform:uppercase;letter-spacing:.5px;margin-bottom:10px">Stroke Rate</div>
+        ${srHtml}
+      </div>
+    </div>
+    ${contexts?`<div style="margin-top:12px;display:flex;gap:6px;flex-wrap:wrap;align-items:center"><span style="font-size:11px;color:var(--text-3)">Flags:</span>${contexts}</div>`:''}
+  `;
+}
+
+// ═══════════════════════════════════════
+// TRIAL RESULTS
+// ═══════════════════════════════════════
+async function saveResult() {
+  if(!S.current) {
+    // Try to use the first athlete if no current
+    if(S.athletes.length) S.current = S.athletes[0];
+    else { showToast('Add an athlete first','error'); return; }
+  }
+  const actual = parseFloat(document.getElementById('r-actual').value);
+  if(!actual||isNaN(actual)){showToast('Please enter actual time','error');return;}
+  const n = document.getElementById('r-trial').value;
+  const rpe     = parseInt(document.getElementById('r-rpe').value)||null;
+  const context = document.getElementById('r-context').value;
+  const sr      = parseFloat(document.getElementById('r-sr').value)||null;
+  const __res = { actual, date:document.getElementById('r-date').value, rpe, context, strokeRate:sr, notes:document.getElementById('r-notes').value };
+  S.current.results['t'+n] = __res;
+  if (window.AQ?.isBackendMode()) {
+    try { await window.AQ.Trials.create({ athleteId:S.current.id, trialNumber:parseInt(n), actualTime:actual, date:__res.date||null, rpe, context, strokeRate:sr, notes:__res.notes||null }); }
+    catch(e) { console.warn('Trial sync:', e.message); }
+  }
+  closeModal('modalResult');
+  showToast('✓ Result saved','success');
+  updateCounts();
+  if(document.getElementById('pg-athlete-detail').style.display!=='none'){renderTrialCards();renderChart();renderKPIs();}
+  renderTrialsPage(); renderAthleteView();
+}
+
+function renderTrialsPage() {
+  const cont = document.getElementById('trials-table');
+  const all = S.athletes.filter(a=>a.results.t1||a.results.t2||a.results.t3);
+  if(!all.length){cont.innerHTML='<div class="empty-state" style="padding:28px 0"><div class="empty-icon">🎯</div><div class="empty-title">No results yet</div><div class="empty-sub">Add athletes and record trial results</div></div>';return;}
+  cont.innerHTML=`<table class="data-table"><thead><tr><th>Athlete</th><th>Category</th><th>T1 Gap</th><th>T1 RPE</th><th>T2 Gap</th><th>T2 RPE</th><th>T3 Gap</th><th>T3 RPE</th><th>Context</th></tr></thead><tbody>${all.map(a=>{
+    const gap=(n)=>{const r=a.results['t'+n],tgt=a.targets['t'+n];if(!r)return'—';if(!tgt)return r.actual+'s';const g=((r.actual-tgt)/tgt*100).toFixed(1);return`<span class="${parseFloat(g)<=0?'pill-green':'pill-red'} pill">${parseFloat(g)>0?'+':''}${g}%</span>`;};
+    const rpe=(n)=>{const r=a.results['t'+n];if(!r||!r.rpe)return'<span style="color:var(--text-3)">—</span>';const col=r.rpe>=8?'var(--red)':r.rpe>=5?'var(--amber)':'var(--green)';return`<span style="font-weight:700;color:${col}">${r.rpe}</span>`;};
+    const ctxAll=[a.results.t1?.context,a.results.t2?.context,a.results.t3?.context].filter(c=>c&&c!=='Normal');
+    return`<tr onclick="openAthlete(${a.id})"><td><div class="ath-cell"><div class="ath-av">${a.name.split(' ').map(w=>w[0]).join('').slice(0,2)}</div><div class="ath-nm">${a.name}</div></div></td><td><span style="font-size:11px;color:var(--text-3)">${a.category||'—'}</span></td><td>${gap(1)}</td><td>${rpe(1)}</td><td>${gap(2)}</td><td>${rpe(2)}</td><td>${gap(3)}</td><td>${rpe(3)}</td><td>${ctxAll.length?`<span style="font-size:11px;color:var(--amber)">${ctxAll[0]}</span>`:'—'}</td></tr>`;
+  }).join('')}</tbody></table>`;
+}
+
+// ── PROFESSIONAL ADAPT ENGINE (Maglischo Primary Reference — v3.0) ──
+/**
+ * ═══════════════════════════════════════════════════════════════════════
+ * AQUASTROKE — PROFESSIONAL PERIODIZATION AUTO-ADAPT ENGINE
+ * Version: 3.0 — Full Maglischo Reference
+ * Methodology: Maglischo "Swimming Fastest" — Primary Reference
+ * Secondary: Bompa Periodization Structure, AIS Long Course Framework
+ * ═══════════════════════════════════════════════════════════════════════
+ *
+ * SCIENTIFIC FOUNDATIONS:
+ * ─────────────────────────────────────────────────────────────────────
+ * PRIMARY: Ernest Maglischo — "Swimming Fastest" (3rd Edition, 2003)
+ *    → Intensity zone definitions by lactate concentration
+ *    → Energy system percentages per event type AND per phase
+ *    → Stroke-specific loading norms (Chapters 5, 6, 14)
+ *    → ATP-PC / Anaerobic Glycolysis / Aerobic Glycolysis framework
+ *    → Lactate response curves for training zone calibration
+ *
+ * SECONDARY: Tudor Bompa — Phase structure and periodization cycles
+ * SECONDARY: AIS Swimming — Long course season timing and trial placement
+ *
+ * 4. Borg Modified CR-10 — RPE Scale
+ *    → Subjective load validation against objective load
+ *
+ * ═══════════════════════════════════════════════════════════════════════
+ *
+ * OUTPUTS PER ATHLETE:
+ * ─────────────────────────────────────────────────────────────────────
+ * 1. Fatigue Index Score (0–100)
+ * 2. Readiness State (Recovered / Loaded / Fatigued / Overreached)
+ * 3. Load Recommendation (Volume % change, Intensity zone shift)
+ * 4. Session Prescription (Energy system %, stroke loading)
+ * 5. Next-Phase Projection (if trial is phase-end)
+ * 6. Taper Signal (if athlete shows peak early)
+ */
+
+// ═══════════════════════════════════════════════════════════════════════
+// CONSTANTS — SCIENTIFIC NORMS
+// ═══════════════════════════════════════════════════════════════════════
+
+/**
+ * INTENSITY ZONES — Maglischo Lactate-Based Framework
+ * ─────────────────────────────────────────────────────
+ * Primary reference: Maglischo "Swimming Fastest" Ch. 5
+ *
+ * Maglischo defines zones by blood lactate response, not velocity alone.
+ * CSS velocity is used as a FIELD PROXY for lactate threshold (≈ 4 mmol/L)
+ * since developmental coaches rarely have lactate testing access.
+ *
+ * Maglischo Zone Mapping (original nomenclature → our Z1–Z5):
+ *   A1 (Recovery)      → Z1: < 2 mmol/L,  < 75% best pace
+ *   A2 (Aerobic Base)  → Z2: 2–3 mmol/L,  75–85% best pace
+ *   An1 (Threshold)    → Z3: 3–5 mmol/L,  85–95% best pace (≈ CSS)
+ *   An2 (VO2/Lactate)  → Z4: 5–8 mmol/L,  95–102% best pace
+ *   An3 (Sprint/ATP-PC)→ Z5: > 8 mmol/L,  > 102% best pace, <15s efforts
+ *
+ * CSS velocity ≈ the An1/An2 boundary (lactate threshold at ~4 mmol/L)
+ * All % ranges below are expressed relative to CSS velocity.
+ */
+const INTENSITY_ZONES = {
+  Z1: {
+    name: "Aerobic Recovery (A1)",
+    maglischoZone: "A1",
+    lactateRange: "< 2 mmol/L",
+    cssVelocityRange: { min: 0, max: 0.78 },
+    hrRange: { min: 60, max: 72 },
+    percentBestPace: "< 75%",
+    typicalSets: "400–1500m continuous, drills, kick sets",
+    description: "Active recovery only. Maglischo: 'primarily oxidative phosphorylation, no significant lactate accumulation.' Cannot cause adaptation — purpose is recovery and technique.",
+    adaptationTarget: "None — flush lactate, restore glycogen",
+  },
+  Z2: {
+    name: "Aerobic Base (A2)",
+    maglischoZone: "A2",
+    lactateRange: "2–3 mmol/L",
+    cssVelocityRange: { min: 0.78, max: 0.88 },
+    hrRange: { min: 72, max: 82 },
+    percentBestPace: "75–85%",
+    typicalSets: "200–400m repeats, 15–30s rest, large volume",
+    description: "Primary volume zone. Maglischo: 'aerobic glycolysis dominant. Highest training volume should be here.' Builds mitochondrial density and aerobic enzyme activity.",
+    adaptationTarget: "Mitochondrial density, aerobic enzyme activity, fat oxidation",
+  },
+  Z3: {
+    name: "Anaerobic Threshold (An1)",
+    maglischoZone: "An1",
+    lactateRange: "3–5 mmol/L",
+    cssVelocityRange: { min: 0.88, max: 1.00 },
+    hrRange: { min: 82, max: 90 },
+    percentBestPace: "85–95%",
+    typicalSets: "100–400m repeats @ CSS pace, 20–45s rest",
+    description: "CSS pace zone. Maglischo: 'most important zone for distance and middle-distance events.' Raises lactate threshold — the primary determinant of sustained race performance.",
+    adaptationTarget: "Lactate threshold elevation, buffering capacity, race-pace economy",
+  },
+  Z4: {
+    name: "Lactate Tolerance / VO2 (An2)",
+    maglischoZone: "An2",
+    lactateRange: "5–8 mmol/L",
+    cssVelocityRange: { min: 1.00, max: 1.08 },
+    hrRange: { min: 90, max: 97 },
+    percentBestPace: "95–102%",
+    typicalSets: "50–200m repeats above CSS, 45–90s rest",
+    description: "Above-threshold. Maglischo: 'trains the anaerobic glycolytic pathway and VO2max simultaneously.' Critical for 100–400m event performance. High acidosis — requires full recovery.",
+    adaptationTarget: "VO2max, lactate production capacity, acid-base buffering",
+  },
+  Z5: {
+    name: "Sprint / ATP-PC (An3)",
+    maglischoZone: "An3",
+    lactateRange: "> 8 mmol/L",
+    cssVelocityRange: { min: 1.08, max: 1.35 },
+    hrRange: { min: 97, max: 100 },
+    percentBestPace: "> 102%",
+    typicalSets: "10–25m max effort, 3–5 min full rest",
+    description: "Maximum speed. Maglischo: 'ATP-PC system dominant for first 6–10 seconds. Beyond 15s, significant anaerobic glycolysis.' Pure sprint training — neuromuscular, not metabolic adaptation.",
+    adaptationTarget: "Neuromuscular power, stroke rate ceiling, ATP-PC resynthesis rate",
+  },
+};
+
+/**
+ * PHASE DEFINITIONS — 36-week season
+ * ─────────────────────────────────────────────────────────────────────
+ * Reference: Maglischo "Swimming Fastest" Ch. 14 + Ch. 6
+ *
+ * KEY MAGLISCHO PRINCIPLES applied here:
+ *
+ * 1. Energy system % = training emphasis, not physiological contribution.
+ *    "Aerobic 70%" means 70% of session time in Z1–Z3, not that ATP-PC
+ *    contributes 70% of energy. Maglischo is explicit about this distinction.
+ *
+ * 2. Zone distributions are BASE defaults for middle-distance (100–400m).
+ *    STROKE_PROFILES apply event-specific modifications on top.
+ *    Sprint events shift ~5–8% from Z2→Z4/Z5. Distance shifts ~8% from Z4→Z2.
+ *
+ * 3. Maglischo lactate zone naming (An1/An2/An3) maps to our Z3/Z4/Z5.
+ *    The "An" prefix = anaerobic contribution significant, not dominant.
+ *
+ * 4. Volume ranges reflect developmental (club/grassroots) norms.
+ *    Elite programs (Maglischo Ch. 14 Table 14.1) run 40–80% higher.
+ *    Developmental target: 60–70% of elite norms = still high adaptation stimulus.
+ *
+ * 5. CSS benchmark targets per phase derived from Maglischo's race pace
+ *    progression tables, adapted for developmental athlete CSS ranges.
+ */
+const PHASES = {
+  GPP: {
+    // Maglischo: "Foundation phase — 75–85% aerobic. Primary goal: mitochondrial
+    // enzyme induction. Volume increases 10–15% each week."
+    weeks: [1, 8],
+    volumeRange: { min: 1800, target: 2200, max: 2600 },
+    maglischoPrinciple: "Aerobic glycolysis dominance. Build mitochondrial density. No significant An2/An3.",
+    intensityTarget: 72,  // % of CSS — well within Z2
+    energySystems: {
+      // Maglischo Table 14.2: GPP = primarily A2, moderate A1, minimal An1
+      aerobic: 75,   // Z1 + Z2 combined (Maglischo A1+A2)
+      lactate: 22,   // Z3 An1 — threshold work begins Week 4+
+      alactic: 3,    // Z5 An3 — minimal. Only stride/technique sprints
+    },
+    zoneDistribution: {
+      // Maglischo: "70–80% of GPP volume in A1–A2. An1 introduced progressively."
+      Z1: 25,  // A1: recovery swims, kick sets, drills
+      Z2: 48,  // A2: aerobic base — highest allocation of season
+      Z3: 22,  // An1: CSS pace sets, introduced Week 3–4
+      Z4: 5,   // An2: minimal — occasional 50s above threshold only
+      Z5: 0,   // An3: zero in GPP — neuromuscular system not ready
+    },
+    strokeLoading: {
+      // Maglischo: "GPP uses all strokes equally. Specialisation begins SPP1."
+      primary: 55, secondary: 28, IM: 17,
+    },
+    density: {
+      workRest: "1:1.5",
+      restRange: [35, 55],  // Maglischo: longer rest in GPP allows higher quality
+      maglischoNote: "Rest intervals should allow near-complete lactate clearance in GPP.",
+    },
+    objective: "Build mitochondrial density. Establish aerobic enzyme base. Introduce CSS pace progressively from Week 3.",
+    cSSBenchmark: { min: 0.88, target: 0.93 },
+  },
+
+  SPP1: {
+    // Maglischo: "Transition from pure aerobic to mixed training. An1 volume
+    // reaches peak. First event-specific loading. CSS should be measurable."
+    weeks: [9, 16],
+    volumeRange: { min: 2600, target: 3000, max: 3600 },
+    maglischoPrinciple: "An1 (threshold) volume peaks. Primary adaptation: lactate threshold elevation.",
+    intensityTarget: 80,
+    energySystems: {
+      // Maglischo: "SPP1 = 65–70% aerobic, 25–28% An1, 5–8% An2/An3"
+      aerobic: 68,
+      lactate: 25,
+      alactic: 7,
+    },
+    zoneDistribution: {
+      // Maglischo Ch. 14: "An1 is the highest priority zone in SPP1"
+      Z1: 18,  // Reduced from GPP — less pure recovery needed
+      Z2: 38,  // Still substantial aerobic base
+      Z3: 30,  // An1 — threshold peak. "8×200 @ CSS, 4×400 @ CSS" (Maglischo Ch.6)
+      Z4: 12,  // An2 — introduced properly. Above CSS intervals.
+      Z5: 2,   // An3 — minimal. 6×25 max, Fri only
+    },
+    strokeLoading: {
+      // Maglischo: "SPP1 introduces primary stroke specialisation. 60–65% primary."
+      primary: 63, secondary: 22, IM: 15,
+    },
+    density: {
+      workRest: "1:1",
+      restRange: [25, 45],
+      maglischoNote: "Rest must allow enough recovery to maintain pace quality. Incomplete rest = Z2 stimulus, not Z3.",
+    },
+    objective: "Elevate lactate threshold via sustained Z3 volume. Build CSS from Z3 foundation. Trial 1 performance check.",
+    cSSBenchmark: { min: 0.95, target: 1.01 },
+  },
+
+  SPP2: {
+    // Maglischo: "An2 volume rises significantly. Race pace training begins.
+    // Most physically demanding phase. Highest fatigue risk."
+    weeks: [17, 24],
+    volumeRange: { min: 3000, target: 3600, max: 4000 },
+    maglischoPrinciple: "An2 (VO2/lactate tolerance) rises. Race pace established. Highest training stress.",
+    intensityTarget: 86,
+    energySystems: {
+      // Maglischo: "SPP2 = 55–60% aerobic, 27–30% An1, 13–17% An2/An3"
+      aerobic: 57,
+      lactate: 30,  // An1 + An2 combined
+      alactic: 13,
+    },
+    zoneDistribution: {
+      // Maglischo: "Z3 maintained. Z4 rises sharply. Z5 introduced for sprint events."
+      Z1: 12,  // Minimum recovery — phase intensity demands it
+      Z2: 32,  // Aerobic base maintenance
+      Z3: 30,  // An1 maintained from SPP1
+      Z4: 18,  // An2 peak — "above CSS intervals, full recovery" (Maglischo)
+      Z5: 8,   // An3 — sprint events +3%, others standard
+    },
+    strokeLoading: {
+      // Maglischo: "SPP2 = primary stroke 65–70%. IM athletes reduce IM, increase primary."
+      primary: 68, secondary: 20, IM: 12,
+    },
+    density: {
+      workRest: "1:1.5",  // Longer rest in Z4 sets (Maglischo: full recovery for quality)
+      restRange: [30, 90],
+      maglischoNote: "Z4 sets require 60–90s rest. Z3 sets 25–35s. Do not conflate rest intervals.",
+    },
+    objective: "Develop race-pace capacity (Z3–Z4). VO2max stimulation. Trial 2 performance. Highest fatigue accumulation week.",
+    cSSBenchmark: { min: 1.01, target: 1.07 },
+  },
+
+  COMP: {
+    // Maglischo: "Volume drops 15–25%. Intensity maintained or increased.
+    // An3 rises sharply. Race simulation replaces volume sessions."
+    weeks: [25, 32],
+    volumeRange: { min: 2400, target: 2800, max: 3200 },
+    maglischoPrinciple: "Volume reduction. Quality over quantity. An3 and race-pace dominate.",
+    intensityTarget: 89,
+    energySystems: {
+      // Maglischo: "COMP = 45–50% aerobic, 28–32% An1/An2, 20–25% An3"
+      aerobic: 47,
+      lactate: 32,
+      alactic: 21,
+    },
+    zoneDistribution: {
+      // Maglischo: "Z4+Z5 combined now > 25%. Z2 maintained for recovery between quality sessions."
+      Z1: 14,  // Recovery between hard sessions
+      Z2: 28,  // Base maintenance — cannot be eliminated
+      Z3: 26,  // An1 — reduced from SPP2 peak
+      Z4: 18,  // An2 — maintained
+      Z5: 14,  // An3 — significant rise. "6×25 max + race simulations" (Maglischo)
+    },
+    strokeLoading: {
+      // Maglischo: "Highest primary stroke specialisation in COMP phase."
+      primary: 73, secondary: 17, IM: 10,
+    },
+    density: {
+      workRest: "1:2.5",  // Maglischo: "Full recovery mandatory for An3 quality"
+      restRange: [45, 120],
+      maglischoNote: "Incomplete rest in COMP reduces An3 to An2 quality. Rest is not optional.",
+    },
+    objective: "Race sharpening. Sprint power development (An3). Competition simulation. Trial 3 peak performance.",
+    cSSBenchmark: { min: 1.05, target: 1.11 },
+  },
+
+  TAPER: {
+    // Maglischo: "Volume reduces 40–60%. Intensity maintained at COMP levels.
+    // An3 proportion rises further. No new fitness gains — retain what is built."
+    weeks: [33, 35],
+    volumeRange: { min: 1200, target: 1700, max: 2100 },
+    maglischoPrinciple: "Volume −40–60% from peak. Intensity preserved. Neuromuscular system priority.",
+    intensityTarget: 93,
+    energySystems: {
+      // Maglischo: "Taper shifts energy emphasis dramatically toward An3."
+      aerobic: 33,
+      lactate: 25,
+      alactic: 42,
+    },
+    zoneDistribution: {
+      // Maglischo: "Taper = 'sharpening'. Z5 is highest single allocation."
+      Z1: 22,  // More Z1 than COMP — recovery between quality bursts
+      Z2: 22,  // Base minimum
+      Z3: 18,  // An1 — reduced. Race is the threshold stimulus now.
+      Z4: 13,  // An2 — maintained for lactate buffering
+      Z5: 25,  // An3 — highest in season. "Daily sprint work, full rest" (Maglischo)
+    },
+    strokeLoading: {
+      primary: 78, secondary: 14, IM: 8,
+    },
+    density: {
+      workRest: "1:4",
+      restRange: [90, 180],
+      maglischoNote: "Taper rest intervals: 'as long as needed to feel fully recovered.' Quality is everything.",
+    },
+    objective: "Neuromuscular sharpening. Maintain peak fitness. Remove fatigue from SPP2/COMP load.",
+    cSSBenchmark: { min: 1.07, target: 1.13 },
+  },
+
+  CHAMP: {
+    // Maglischo: "Championship week. 'Less is more.' 2–3 short sessions max.
+    // Goal: arrive rested, sharp, and confident."
+    weeks: [36, 36],
+    volumeRange: { min: 600, target: 900, max: 1200 },
+    maglischoPrinciple: "Minimal load. Maximal readiness. Race preparation only.",
+    intensityTarget: 97,
+    energySystems: {
+      aerobic: 20,
+      lactate: 18,
+      alactic: 62,  // Maglischo: "Championship week is almost entirely An3 emphasis"
+    },
+    zoneDistribution: {
+      Z1: 25,  // Warm-up and cool-down volume
+      Z2: 18,
+      Z3: 12,
+      Z4: 8,
+      Z5: 37,  // An3 — race effort simulations. "3×race distance starts, full rest"
+    },
+    strokeLoading: {
+      primary: 83, secondary: 12, IM: 5,
+    },
+    density: {
+      workRest: "1:6",
+      restRange: [120, 360],
+      maglischoNote: "Championship: rest until fully recovered. Fatigue here is unacceptable.",
+    },
+    objective: "Race simulation only. Arrive to championship recovered and sharp.",
+    cSSBenchmark: { min: 1.09, target: 1.15 },
+  },
+};
+
+/**
+ * STROKE CATEGORY PROFILES — Maglischo Event Physiology
+ * ─────────────────────────────────────────────────────
+ * Reference: Maglischo "Swimming Fastest" Ch. 5, Tables 5.2–5.6
+ *
+ * Maglischo's core finding: "The energy system contribution to any swimming
+ * event is primarily determined by event duration, not stroke."
+ * Duration (seconds) → energy system → training emphasis.
+ *
+ * 50m free ≈ 22–28s  → ~80% An3 (ATP-PC), ~20% An2
+ * 100m free ≈ 48–65s → ~35% An3, ~45% An2, ~20% An1
+ * 200m free ≈ 105–140s→ ~15% An3, ~40% An2, ~45% An1
+ * 400m free ≈ 230–280s→ ~5%  An3, ~25% An2, ~70% An1+A2
+ * 800m/1500m ≈ 500s+ → ~2%  An3, ~15% An2, ~83% aerobic
+ *
+ * TRAINING IMPLICATION (Maglischo Ch. 14):
+ * "Train the energy systems that WILL be stressed in competition."
+ * Sprint events need more An3 (Z5) training.
+ * Distance events need more A2 (Z2) volume.
+ * Both need the full aerobic base — only the proportions differ.
+ */
+const STROKE_PROFILES = {
+  Sprint: {
+    // Maglischo: "50m–100m events. ATP-PC + anaerobic glycolysis dominant.
+    // Training must develop neuromuscular power AND lactate tolerance."
+    events: ["50m Freestyle", "100m Freestyle", "100m Backstroke",
+             "100m Breaststroke", "100m Butterfly"],
+    maglischoEnergyProfile: {
+      // Race energy contributions (Maglischo Ch. 5 Table 5.3)
+      atpPc: 38,         // An3: first 6–10s — critical for sprint events
+      anaerobicGlycolysis: 42,  // An2: 10–60s — lactate tolerance essential
+      aerobicGlycolysis: 20,    // A2/An1: even sprinters need aerobic base
+    },
+    primaryEnergySystem: "ATP-PC + Anaerobic Glycolysis (An3+An2)",
+    maglischoNote: "Sprint training error: too much Z2 volume, not enough Z4/Z5 quality.",
+    volumeSensitivity: "low",
+    intensitySensitivity: "high",
+    // Volume modifier: sprint athletes reduce total volume in later phases
+    // to preserve neuromuscular freshness for quality Z4/Z5 work
+    phaseVolumeModifier: { GPP: 1.0, SPP1: 0.93, SPP2: 0.88, COMP: 0.83, TAPER: 0.70 },
+    // Intensity modifier: sprint athletes shift zones up progressively
+    phaseIntensityModifier: { GPP: 1.0, SPP1: 1.03, SPP2: 1.06, COMP: 1.09, TAPER: 1.12 },
+    // Zone shift vs base phase distribution (Maglischo: +8% Z4/Z5 for sprint events)
+    zoneModifiers: { Z2: -5, Z3: -3, Z4: +4, Z5: +4 },
+    adaptPriority: "intensity_over_volume",
+    // Adaptation prescription: when gap occurs, increase Z4/Z5 not Z2 volume
+    gapAdaptBias: { volumeChangeMod: -0.5, intensityZoneShift: +1 },
+  },
+
+  Middle: {
+    // Maglischo: "200m–400m IM. 'The most demanding events physiologically.'
+    // All three energy systems contribute significantly. No single system dominates."
+    events: ["200m Freestyle", "200m Backstroke", "200m Breaststroke",
+             "200m Butterfly", "200m IM", "400m IM"],
+    maglischoEnergyProfile: {
+      atpPc: 15,
+      anaerobicGlycolysis: 42,  // An2 dominant for 200m events
+      aerobicGlycolysis: 43,
+    },
+    primaryEnergySystem: "Anaerobic Glycolysis + Aerobic Glycolysis (An2+An1)",
+    maglischoNote: "200m events: both threshold AND speed training essential. Neither alone is sufficient.",
+    volumeSensitivity: "medium",
+    intensitySensitivity: "medium",
+    phaseVolumeModifier: { GPP: 1.0, SPP1: 1.0, SPP2: 1.02, COMP: 0.95, TAPER: 0.78 },
+    phaseIntensityModifier: { GPP: 1.0, SPP1: 1.0, SPP2: 1.03, COMP: 1.05, TAPER: 1.07 },
+    zoneModifiers: { Z2: 0, Z3: +2, Z4: +1, Z5: -3 },  // Balanced with slight threshold emphasis
+    adaptPriority: "balanced",
+    gapAdaptBias: { volumeChangeMod: 0, intensityZoneShift: 0 },
+  },
+
+  Distance: {
+    // Maglischo: "400m–1500m freestyle. Aerobic glycolysis dominant.
+    // 'More volume at A2/An1 produces greater CSS and VO2max gains
+    //  than equivalent volume at An2/An3 for these events.'"
+    events: ["400m Freestyle", "800m Freestyle", "1500m Freestyle"],
+    maglischoEnergyProfile: {
+      atpPc: 3,
+      anaerobicGlycolysis: 17,
+      aerobicGlycolysis: 80,    // Maglischo: "800m+ events are essentially aerobic"
+    },
+    primaryEnergySystem: "Aerobic Glycolysis + An1 (A2+An1)",
+    maglischoNote: "Distance error: adding high-intensity work before aerobic base is maximal. Volume is the primary adaptation driver.",
+    volumeSensitivity: "high",
+    intensitySensitivity: "low",
+    // Distance athletes: increase volume through SPP2, hold in COMP
+    phaseVolumeModifier: { GPP: 1.0, SPP1: 1.07, SPP2: 1.12, COMP: 1.02, TAPER: 0.82 },
+    phaseIntensityModifier: { GPP: 1.0, SPP1: 1.0, SPP2: 1.01, COMP: 1.03, TAPER: 1.05 },
+    // Zone shift: more Z2, less Z4/Z5
+    zoneModifiers: { Z2: +8, Z3: +2, Z4: -5, Z5: -5 },
+    adaptPriority: "volume_over_intensity",
+    // When gap occurs for distance: increase Z2 volume before touching intensity
+    gapAdaptBias: { volumeChangeMod: +0.5, intensityZoneShift: -1 },
+  },
+};
+
+/**
+ * FATIGUE INDEX CALCULATION
+ * Composite score 0–100 based on RPE, gap, attendance, context
+ */
+function calculateFatigueIndex(trial) {
+  const { gapPercent, rpe, attendancePercent, context } = trial;
+
+  if (!rpe) return null;  // Cannot calculate without RPE
+
+  // Base fatigue from RPE (0–40 points)
+  const rpeFatigue = (rpe / 10) * 40;
+
+  // Performance-effort mismatch (0–30 points)
+  // High RPE + bad gap = high fatigue
+  // Low RPE + bad gap = not fatigue (technical issue)
+  let mismatch = 0;
+  if (gapPercent > 0 && rpe >= 7) {
+    mismatch = Math.min((gapPercent / 10) * (rpe / 10) * 30, 30);
+  }
+
+  // Attendance penalty (0–20 points)
+  // Low attendance = low training stimulus = gap is NOT fatigue-related
+  // But we still flag it as a load context issue
+  const attendanceFatigue = attendancePercent >= 80 ? 0 :
+                            attendancePercent >= 60 ? 10 : 20;
+
+  // Context modifier
+  const contextModifier = {
+    "Normal":    0,
+    "Excellent": -10,  // Better conditions reduce fatigue score
+    "Exam":      15,   // Academic stress adds physiological fatigue
+    "Illness":   40,   // Forces high fatigue score regardless
+    "Injury":    50,   // Maximum — always flag
+    "Equipment": -5,   // Environmental, not physiological
+  }[context] ?? 0;
+
+  const raw = rpeFatigue + mismatch - attendanceFatigue + contextModifier;
+  return Math.max(0, Math.min(100, Math.round(raw)));
+}
+
+/**
+ * READINESS STATE — from fatigue index
+ */
+function getReadinessState(fatigueIndex) {
+  if (fatigueIndex === null) return { state: "UNKNOWN", color: "gray", action: "Record RPE to enable fatigue analysis." };
+  if (fatigueIndex <= 25)   return { state: "RECOVERED",   color: "green",  action: "Athlete is recovered. Full training load appropriate." };
+  if (fatigueIndex <= 50)   return { state: "LOADED",      color: "blue",   action: "Normal training load. Monitor for accumulation." };
+  if (fatigueIndex <= 70)   return { state: "FATIGUED",    color: "amber",  action: "Reduce load this week. Prioritise recovery sessions." };
+  return                           { state: "OVERREACHED", color: "red",    action: "Mandatory load reduction. Medical/recovery assessment." };
+}
+
+// ═══════════════════════════════════════════════════════════════════════
+// CORE ADAPTATION ENGINE
+// ═══════════════════════════════════════════════════════════════════════
+
+/**
+ * PRIMARY FUNCTION: Generate full adaptation prescription
+ *
+ * @param {Object} athlete - Full athlete object
+ * @param {number} currentWeek - Current season week (1–36)
+ * @param {string} currentPhase - GPP | SPP1 | SPP2 | COMP | TAPER | CHAMP
+ * @param {number} trialNumber - 1, 2, or 3
+ * @returns {Object} Full adaptation prescription
+ */
+function generateAdaptation(athlete, currentWeek, currentPhase, trialNumber) {
+
+  const trialKey = "t" + trialNumber;
+  const result   = athlete.results[trialKey];
+  const target   = athlete.targets[trialKey];
+  const profile  = STROKE_PROFILES[athlete.category] || STROKE_PROFILES.Middle;
+  const phase    = PHASES[currentPhase];
+
+  if (!result || !target) {
+    return { error: "No trial result or target found for T" + trialNumber };
+  }
+
+  // ── 1. GAP ANALYSIS ─────────────────────────────────────────────
+  const gapPercent = parseFloat(((result.actual - target) / target * 100).toFixed(2));
+  const gapSign    = gapPercent <= 0 ? "positive" : "negative";
+
+  // ── 2. FATIGUE INDEX ────────────────────────────────────────────
+  const attendancePercent = athlete.attendance
+    ? Math.round((athlete.attendance.attended / Math.max(athlete.attendance.planned, 1)) * 100)
+    : 100;  // Assume full if not tracked
+
+  const fatigueInput = {
+    gapPercent,
+    rpe: result.rpe || null,
+    attendancePercent,
+    context: result.context || "Normal",
+  };
+
+  const fatigueIndex   = calculateFatigueIndex(fatigueInput);
+  const readiness      = getReadinessState(fatigueIndex);
+
+  // ── 3. CONTEXT OVERRIDE CHECK ───────────────────────────────────
+  const contextOverrides = {
+    "Illness":   { blocked: true, reason: "Medical clearance required before any load modification." },
+    "Injury":    { blocked: true, reason: "Injury protocol: stop training assessment. Medical review mandatory." },
+    "Equipment": { blocked: false, invalidTrial: true, reason: "Environmental factor. Repeat trial under standard conditions. Do not adapt." },
+    "Exam":      { blocked: false, temporary: true,    reason: "Academic stress is temporary. Hold current load. Retest in 3 weeks." },
+  };
+
+  const override = contextOverrides[result.context];
+  if (override?.blocked || override?.invalidTrial || override?.temporary) {
+    return buildContextOverrideResponse(athlete, override, gapPercent, fatigueIndex, readiness, phase, profile);
+  }
+
+  // ── 4. ATTENDANCE CHECK ─────────────────────────────────────────
+  const attendanceFlag = attendancePercent < 60
+    ? { level: "critical", message: "Attendance below 60%. Training stimulus is insufficient. Address attendance before load change." }
+    : attendancePercent < 80
+    ? { level: "warning",  message: "Attendance " + attendancePercent + "%. Gap may reflect insufficient training stimulus, not adaptation failure." }
+    : null;
+
+  // ── 5. GAP-BASED LOAD PRESCRIPTION ─────────────────────────────
+  const loadPrescription = calculateLoadPrescription(
+    gapPercent, fatigueIndex, result.rpe, profile, phase, currentPhase, currentWeek
+  );
+
+  // ── 6. SESSION PRESCRIPTION ─────────────────────────────────────
+  const sessionPrescription = buildSessionPrescription(
+    loadPrescription, profile, phase, currentPhase
+  );
+
+  // ── 7. NEXT-PHASE PROJECTION ────────────────────────────────────
+  const nextPhaseProjection = projectNextPhase(
+    gapPercent, gapSign, currentPhase, trialNumber, loadPrescription, profile
+  );
+
+  // ── 8. TAPER SIGNAL ─────────────────────────────────────────────
+  const taperSignal = detectTaperSignal(gapPercent, result.rpe, fatigueIndex, currentPhase, currentWeek);
+
+  // ── 9. CSS IMPLICATION ──────────────────────────────────────────
+  const cssImplication = getCSSImplication(gapPercent, result.css, phase, currentPhase);
+
+  return {
+    athlete: { name: athlete.name, event: athlete.event, category: athlete.category },
+    trial: { number: trialNumber, actual: result.actual, target, gapPercent, gapSign },
+    fatigueIndex, readiness,
+    attendanceFlag,
+    loadPrescription,
+    sessionPrescription,
+    nextPhaseProjection,
+    taperSignal,
+    cssImplication,
+    generatedAt: new Date().toISOString(),
+  };
+}
+
+// ═══════════════════════════════════════════════════════════════════════
+// LOAD PRESCRIPTION CALCULATOR
+// ═══════════════════════════════════════════════════════════════════════
+
+function calculateLoadPrescription(gapPercent, fatigueIndex, rpe, profile, phase, currentPhase, currentWeek) {
+
+  const adapt = profile.adaptPriority;
+
+  // ── Base prescription by gap severity ───────────────────────────
+  let base;
+
+  if (gapPercent <= -5) {
+    // Significantly exceeded target — peak may be early
+    base = {
+      severity: "POSITIVE",
+      volumeChange: -10,        // Start reducing slightly
+      intensityZoneShift: +1,  // Move up one zone
+      densityChange: "increase_rest",
+      rationale: "Performance significantly exceeds target. Supercompensation peak detected early.",
+      urgency: "plan_taper_advancement",
+    };
+  } else if (gapPercent <= 0) {
+    // Met or slightly exceeded
+    base = {
+      severity: "ON_TRACK",
+      volumeChange: 0,
+      intensityZoneShift: 0,
+      densityChange: "maintain",
+      rationale: "Athlete on target. Continue planned progression.",
+      urgency: "none",
+    };
+  } else if (gapPercent <= 3) {
+    // Minor gap
+    base = {
+      severity: "MINOR_GAP",
+      volumeChange: 0,
+      intensityZoneShift: 0,
+      densityChange: "maintain",
+      rationale: "Gap within acceptable developmental tolerance (≤3%). Monitor; no load change.",
+      urgency: "monitor",
+    };
+  } else if (gapPercent <= 7) {
+    // Moderate gap — prescription depends on RPE and fatigue
+    if (fatigueIndex !== null && fatigueIndex >= 60) {
+      // High fatigue + gap = overreaching, NOT under-training
+      base = {
+        severity: "FATIGUED_GAP",
+        volumeChange: -15,
+        intensityZoneShift: -1,
+        densityChange: "increase_rest",
+        rationale: "Fatigue index " + fatigueIndex + " indicates overreaching. Reduce load — Maglischo: 'adding volume to a fatigued athlete produces negative adaptation, not positive.'",
+        urgency: "immediate_reduction",
+      };
+    } else if (rpe && rpe >= 8) {
+      // Hard effort, still missing — quality not quantity issue
+      base = {
+        severity: "EFFORT_GAP",
+        volumeChange: -10,
+        intensityZoneShift: 0,
+        densityChange: "increase_rest",
+        rationale: "Maximum effort (RPE " + rpe + ") with gap. Maglischo: 'high RPE at a given pace = athlete is working harder for same output — a fatigue signal, not a fitness signal.' Reduce volume, maintain zone quality.",
+        urgency: "load_quality_shift",
+      };
+    } else {
+      // Low RPE, moderate gap = stimulus too easy OR technical
+      // Apply Maglischo stroke category bias
+      const volBias  = profile.gapAdaptBias?.volumeChangeMod  || 0;
+      const zoneBias = profile.gapAdaptBias?.intensityZoneShift || 0;
+      const baseVolChange   = adapt === "volume_over_intensity" ? +8 : adapt === "intensity_over_volume" ? 0 : +3;
+      const baseZoneShift   = adapt === "intensity_over_volume" ? +1 : 0;
+      base = {
+        severity: "STIMULUS_GAP",
+        volumeChange: Math.round(baseVolChange + volBias * 4),
+        intensityZoneShift: baseZoneShift + zoneBias,
+        densityChange: "reduce_rest",
+        rationale: "Low-effort gap (RPE ≤7). Maglischo: 'insufficient training stimulus. " + (adapt === "volume_over_intensity" ? "Distance athletes: increase Z2 volume before raising intensity." : adapt === "intensity_over_volume" ? "Sprint athletes: increase zone quality — move from Z3 to Z4." : "Increase both volume and zone stimulus gradually.") + "'",
+        urgency: "increase_stimulus",
+      };
+    }
+  } else if (gapPercent <= 12) {
+    // Significant gap — full review needed
+    base = {
+      severity: "SIGNIFICANT_GAP",
+      volumeChange: fatigueIndex >= 60 ? -20 : -10,
+      intensityZoneShift: -1,
+      densityChange: "increase_rest",
+      rationale: "Significant performance gap. Full coach review required. Technical and physiological assessment.",
+      urgency: "coach_review_required",
+    };
+  } else {
+    // Critical gap > 12%
+    base = {
+      severity: "CRITICAL_GAP",
+      volumeChange: -25,
+      intensityZoneShift: -2,
+      densityChange: "maximum_rest",
+      rationale: "Critical gap >12%. Fundamental mismatch between targets and athlete capacity. Reassess targets and methodology.",
+      urgency: "target_reassessment",
+    };
+  }
+
+  // ── Apply stroke category modifiers ─────────────────────────────
+  const phaseVolumeMultiplier = profile.phaseVolumeModifier[currentPhase] ?? 1.0;
+
+  // Calculate absolute values
+  const currentTargetVolume = phase.volumeRange.target;
+  const newDailyVolume = Math.round(
+    currentTargetVolume * (1 + base.volumeChange / 100) * phaseVolumeMultiplier
+  );
+
+  // Clamp to phase limits
+  const clampedVolume = Math.max(
+    phase.volumeRange.min,
+    Math.min(phase.volumeRange.max, newDailyVolume)
+  );
+
+  // Zone shift
+  const currentZoneTarget = getCurrentPrimaryZone(phase.zoneDistribution);
+  const newZoneTarget = shiftZone(currentZoneTarget, base.intensityZoneShift);
+
+  // Weeks until next trial or end of phase
+  const weeksRemaining = getWeeksToNextMilestone(currentPhase, currentWeek);
+
+  return {
+    ...base,
+    newDailyVolumeMetres: clampedVolume,
+    currentDailyVolumeMetres: currentTargetVolume,
+    volumeChangeMetres: clampedVolume - currentTargetVolume,
+    primaryIntensityZone: newZoneTarget,
+    weeksRemaining,
+    strokeCategoryApplied: profile.adaptPriority,
+  };
+}
+
+// ═══════════════════════════════════════════════════════════════════════
+// SESSION PRESCRIPTION BUILDER
+// ═══════════════════════════════════════════════════════════════════════
+
+function buildSessionPrescription(loadPrescription, profile, phase, currentPhase) {
+
+  const { severity, newDailyVolumeMetres, primaryIntensityZone } = loadPrescription;
+
+  // Start from phase baseline energy system split
+  let energySplit = { ...phase.energySystems };
+  let zoneDistribution = { ...phase.zoneDistribution };
+
+  // Apply Maglischo stroke category zone modifiers
+  if (profile.zoneModifiers) {
+    Object.entries(profile.zoneModifiers).forEach(([z, delta]) => {
+      zoneDistribution[z] = Math.max(0, (zoneDistribution[z] || 0) + delta);
+    });
+  }
+
+  if (severity === "FATIGUED_GAP" || severity === "OVERREACHED") {
+    // Shift toward recovery
+    zoneDistribution = { Z1: 40, Z2: 35, Z3: 20, Z4: 5, Z5: 0 };
+    energySplit = { aerobic: 80, lactate: 18, alactic: 2 };
+  }
+
+  if (severity === "STIMULUS_GAP" && profile.adaptPriority === "intensity_over_volume") {
+    // Maglischo: sprint athletes need higher intensity stimulus, not more volume
+    const extraZ45 = profile.zoneModifiers ? Math.abs(profile.zoneModifiers.Z5 || 0) + 3 : 5;
+    zoneDistribution.Z4 = Math.min(28, (zoneDistribution.Z4 || 0) + Math.ceil(extraZ45/2));
+    zoneDistribution.Z5 = Math.min(18, (zoneDistribution.Z5 || 0) + Math.floor(extraZ45/2));
+    zoneDistribution.Z2 = Math.max(15, (zoneDistribution.Z2 || 0) - extraZ45);
+  }
+
+  // Weekly session structure based on volume and phase
+  const weeklySessions = buildWeeklySessionStructure(
+    newDailyVolumeMetres, phase, currentPhase, severity, profile
+  );
+
+  return {
+    energySystemSplit: energySplit,
+    intensityZoneDistribution: normalizeZones(zoneDistribution),
+    weeklyStructure: weeklySessions,
+    restIntervalRange: phase.density.restRange,
+    strokeLoadDistribution: {
+      primaryStroke: phase.strokeLoading.primary + (profile.additionalZ5Target > 0 ? 3 : 0),
+      secondaryStroke: phase.strokeLoading.secondary,
+      IM: phase.strokeLoading.IM,
+    },
+  };
+}
+
+function buildWeeklySessionStructure(dailyVolume, phase, currentPhase, severity, profile) {
+
+  // Number of sessions per week varies by phase and severity
+  const baseSessions = { GPP: 6, SPP1: 6, SPP2: 6, COMP: 5, TAPER: 4, CHAMP: 3 };
+  let sessions = baseSessions[currentPhase] ?? 6;
+
+  if (severity === "FATIGUED_GAP" || severity === "CRITICAL_GAP") sessions -= 1;
+  if (severity === "POSITIVE") sessions = Math.min(sessions + 1, 7);
+
+  const weeklyVolume = dailyVolume * sessions;
+
+  // Build session types
+  const sessionTypes = [];
+
+  if (currentPhase === "GPP") {
+    sessionTypes.push(
+      { day: "Monday",    type: "Aerobic Foundation",  zone: "Z2",       volumeM: Math.round(dailyVolume * 1.0), rest: "45s",  notes: "LSD — long slow distance. Technique cues." },
+      { day: "Tuesday",   type: "Dry Land",             zone: "Gym",      volumeM: 0, rest: "—",   notes: "Core strength, shoulder stability, flexibility." },
+      { day: "Wednesday", type: "Threshold",            zone: "Z2–Z3",    volumeM: Math.round(dailyVolume * 1.1), rest: "40s",  notes: "CSS pace sets. Build lactate threshold." },
+      { day: "Thursday",  type: "Recovery",             zone: "Z1",       volumeM: Math.round(dailyVolume * 0.7), rest: "60s",  notes: "Easy swim. Drill emphasis. 100% Z1." },
+      { day: "Friday",    type: "Aerobic + Stroke",     zone: "Z2",       volumeM: Math.round(dailyVolume * 1.0), rest: "45s",  notes: "Stroke-specific volume. Primary event focus." },
+      { day: "Saturday",  type: "Broken Swims",         zone: "Z3",       volumeM: Math.round(dailyVolume * 0.9), rest: "30s",  notes: "Descending rest sets. Introduce race feel." },
+    );
+  } else if (currentPhase === "SPP1") {
+    sessionTypes.push(
+      { day: "Monday",    type: "Volume + Threshold",   zone: "Z2–Z3",    volumeM: Math.round(dailyVolume * 1.0), rest: "40s",  notes: "CSS pace. High volume. Core phase session." },
+      { day: "Tuesday",   type: "Lactate Threshold",    zone: "Z3",       volumeM: Math.round(dailyVolume * 1.1), rest: "30s",  notes: "CSS pace sets: 8×200 @ CSS or 4×400 @ CSS." },
+      { day: "Wednesday", type: "Recovery Swim",        zone: "Z1",       volumeM: Math.round(dailyVolume * 0.6), rest: "60s",  notes: "Mandatory easy session. No intensity." },
+      { day: "Thursday",  type: "Stroke Specific",      zone: "Z2–Z3",    volumeM: Math.round(dailyVolume * 1.0), rest: "35s",  notes: profile.adaptPriority === "intensity_over_volume" ? "Sprint drills + 6×50 @ Z4." : "Primary stroke volume sets." },
+      { day: "Friday",    type: "VO2 Introduction",     zone: "Z3–Z4",    volumeM: Math.round(dailyVolume * 0.9), rest: "45s",  notes: "Above CSS pace. Short sets (4×100 @ Z4)." },
+      { day: "Saturday",  type: "Race Simulation",      zone: "Z3–Z4",    volumeM: Math.round(dailyVolume * 0.8), rest: "90s",  notes: "Time trial distances. Race pace effort." },
+    );
+  } else if (currentPhase === "SPP2") {
+    sessionTypes.push(
+      { day: "Monday",    type: "Race Pace Volume",     zone: "Z3–Z4",    volumeM: Math.round(dailyVolume * 1.0), rest: "35s",  notes: "Key session. CSS to above-CSS pace. Event distances." },
+      { day: "Tuesday",   type: "VO2 Max",              zone: "Z4",       volumeM: Math.round(dailyVolume * 0.9), rest: "60s",  notes: "8×100 or 4×200 at 103–105% CSS. Full recovery." },
+      { day: "Wednesday", type: "Threshold + Recovery", zone: "Z2–Z3",    volumeM: Math.round(dailyVolume * 0.8), rest: "40s",  notes: "CSS sets + easy finish. Semi-recovery day." },
+      { day: "Thursday",  type: "Stroke Power",         zone: "Z3–Z4",    volumeM: Math.round(dailyVolume * 0.9), rest: "45s",  notes: "Paddles + pullbuoy. Stroke-specific intensity." },
+      { day: "Friday",    type: "Race Sharpness",       zone: "Z4–Z5",    volumeM: Math.round(dailyVolume * 0.8), rest: "120s", notes: "6×50 @ Z5 + broken 200. Full rest between." },
+      { day: "Saturday",  type: "Competition Sim",      zone: "Z4",       volumeM: Math.round(dailyVolume * 0.7), rest: "—",    notes: "Full event distance + warm down. Time noted." },
+    );
+  } else if (currentPhase === "COMP") {
+    sessionTypes.push(
+      { day: "Monday",    type: "Sharpness + Speed",    zone: "Z4–Z5",    volumeM: Math.round(dailyVolume * 1.0), rest: "90s",  notes: "Sprint work. 8×25 max + 4×50 @ Z5." },
+      { day: "Tuesday",   type: "Race Pace",            zone: "Z4",       volumeM: Math.round(dailyVolume * 0.9), rest: "120s", notes: "Event distance @ race pace. Technical focus." },
+      { day: "Wednesday", type: "Recovery",             zone: "Z1–Z2",    volumeM: Math.round(dailyVolume * 0.6), rest: "60s",  notes: "Easy. Drill. Kick. Active recovery only." },
+      { day: "Thursday",  type: "Pre-Meet Quality",     zone: "Z4–Z5",    volumeM: Math.round(dailyVolume * 0.8), rest: "180s", notes: "3×race distance starts. Full rest. Race simulation." },
+      { day: "Friday",    type: "Activation",           zone: "Z3–Z4",    volumeM: Math.round(dailyVolume * 0.5), rest: "120s", notes: "Short activation. Race feel. No fatigue." },
+    );
+  } else if (currentPhase === "TAPER") {
+    sessionTypes.push(
+      { day: "Monday",    type: "Speed + Rest",         zone: "Z5",       volumeM: Math.round(dailyVolume * 1.0), rest: "180s", notes: "6×25 max effort. Full recovery. Neuromuscular." },
+      { day: "Tuesday",   type: "Pace Feel",            zone: "Z4",       volumeM: Math.round(dailyVolume * 0.8), rest: "120s", notes: "2×race distance @ race pace. Feel the speed." },
+      { day: "Thursday",  type: "Activation",           zone: "Z3–Z4",    volumeM: Math.round(dailyVolume * 0.6), rest: "90s",  notes: "Short quality sets. Stroke rate check." },
+      { day: "Saturday",  type: "Pre-Champ Sharpness",  zone: "Z4–Z5",    volumeM: Math.round(dailyVolume * 0.5), rest: "180s", notes: "4×25 max + 200 easy. Final prep session." },
+    );
+  }
+
+  return {
+    sessionsPerWeek: sessions,
+    estimatedWeeklyVolumeM: weeklyVolume,
+    sessions: sessionTypes,
+  };
+}
+
+// ═══════════════════════════════════════════════════════════════════════
+// NEXT PHASE PROJECTION
+// ═══════════════════════════════════════════════════════════════════════
+
+function projectNextPhase(gapPercent, gapSign, currentPhase, trialNumber, loadPrescription, profile) {
+
+  const phaseSequence = ["GPP", "SPP1", "SPP2", "COMP", "TAPER", "CHAMP"];
+  const currentIdx = phaseSequence.indexOf(currentPhase);
+  const nextPhase  = currentIdx < phaseSequence.length - 1 ? phaseSequence[currentIdx + 1] : null;
+
+  if (!nextPhase) return { message: "Championship phase — no further phase projection." };
+
+  const nextPhaseData = PHASES[nextPhase];
+
+  // Volume recommendation for next phase
+  let nextVolumeRecommendation;
+  let nextIntensityFocus;
+
+  if (gapPercent <= -3) {
+    // Positive gap — can progress normally or slightly ahead
+    nextVolumeRecommendation = {
+      target: nextPhaseData.volumeRange.target,
+      modifier: "Standard progression. Athlete ready for next phase load.",
+    };
+    nextIntensityFocus = "Advance to " + nextPhase + " zone distribution. Athlete shows adaptation.";
+  } else if (gapPercent <= 3) {
+    // On track
+    nextVolumeRecommendation = {
+      target: nextPhaseData.volumeRange.target,
+      modifier: "Standard " + nextPhase + " volume.",
+    };
+    nextIntensityFocus = "Follow " + nextPhase + " phase plan. Athlete ready.";
+  } else if (gapPercent <= 7) {
+    // Moderate gap — modified entry into next phase
+    const modifiedTarget = Math.round(nextPhaseData.volumeRange.target * 0.92);
+    nextVolumeRecommendation = {
+      target: modifiedTarget,
+      modifier: "Reduced entry into " + nextPhase + " (−8% from target). Build over first 2 weeks.",
+    };
+    nextIntensityFocus = "Delay zone advancement by 2 weeks. Complete full " + currentPhase + " zone before " + nextPhase + " zones.";
+  } else {
+    // Significant gap — conservative entry
+    const modifiedTarget = Math.round(nextPhaseData.volumeRange.min);
+    nextVolumeRecommendation = {
+      target: modifiedTarget,
+      modifier: "Enter " + nextPhase + " at minimum volume. Build week by week.",
+    };
+    nextIntensityFocus = "Stay in " + currentPhase + " zones for first 3 weeks of " + nextPhase + ". Do not advance until CSS benchmark is met.";
+  }
+
+  // CSS target for next phase
+  const cssBenchmark = nextPhaseData.cSSBenchmark;
+
+  return {
+    nextPhase,
+    weeksInNextPhase: nextPhaseData.weeks[1] - nextPhaseData.weeks[0] + 1,
+    volumeRecommendation: nextVolumeRecommendation,
+    intensityFocus: nextIntensityFocus,
+    cssBenchmarkForNextPhase: cssBenchmark,
+    energySystemTarget: nextPhaseData.energySystems,
+    zoneTargetDistribution: nextPhaseData.zoneDistribution,
+    strokeLoading: {
+      primary: nextPhaseData.strokeLoading.primary + (profile.additionalZ5Target > 0 ? 3 : 0),
+      secondary: nextPhaseData.strokeLoading.secondary,
+      IM: nextPhaseData.strokeLoading.IM,
+    },
+  };
+}
+
+// ═══════════════════════════════════════════════════════════════════════
+// TAPER SIGNAL DETECTION
+// ═══════════════════════════════════════════════════════════════════════
+
+function detectTaperSignal(gapPercent, rpe, fatigueIndex, currentPhase, currentWeek) {
+
+  if (currentPhase === "TAPER" || currentPhase === "CHAMP") {
+    return { signal: false, message: "Already in taper/championship phase." };
+  }
+
+  const signals = [];
+  let signalStrength = 0;
+
+  // Strong positive performance
+  if (gapPercent <= -5) {
+    signals.push("Athlete exceeded trial target by >5% — peak performance detected early.");
+    signalStrength += 40;
+  } else if (gapPercent <= -3) {
+    signals.push("Athlete exceeded trial target by 3–5%.");
+    signalStrength += 20;
+  }
+
+  // Low RPE with excellent performance
+  if (rpe && rpe <= 5 && gapPercent <= -2) {
+    signals.push("Low perceived effort (RPE " + rpe + ") with positive performance — significant reserve remaining.");
+    signalStrength += 25;
+  }
+
+  // Low fatigue index
+  if (fatigueIndex !== null && fatigueIndex <= 20 && gapPercent <= 0) {
+    signals.push("Fatigue index very low (" + fatigueIndex + "). Athlete is fresh and peaked.");
+    signalStrength += 20;
+  }
+
+  // Weeks remaining — late season amplifies signal
+  const weeksFromEnd = 36 - currentWeek;
+  if (weeksFromEnd <= 6 && signalStrength > 30) {
+    signals.push("Only " + weeksFromEnd + " weeks remaining in season — taper urgency elevated.");
+    signalStrength += 15;
+  }
+
+  if (signalStrength >= 40) {
+    return {
+      signal: true,
+      strength: signalStrength,
+      recommendation: "Advance taper by " + (signalStrength >= 60 ? "2" : "1") + " week(s). Current week " + currentWeek + " → begin taper at week " + Math.max(currentWeek + 1, 33),
+      reasons: signals,
+    };
+  }
+
+  return {
+    signal: false,
+    strength: signalStrength,
+    message: "No taper signal detected. Continue planned progression.",
+    reasons: signals,
+  };
+}
+
+// ═══════════════════════════════════════════════════════════════════════
+// CSS IMPLICATION
+// ═══════════════════════════════════════════════════════════════════════
+
+function getCSSImplication(gapPercent, cssValue, phase, currentPhase) {
+
+  if (!cssValue) {
+    return { available: false, message: "CSS not recorded for this trial. Run CSS test protocol: 400m TT + rest + 200m TT. Formula: CSS = 200 / (T400 - T200) m/s" };
+  }
+
+  const benchmark = phase.cSSBenchmark;
+  const cssDiff   = cssValue - benchmark.target;
+
+  let interpretation;
+  let zoneCalibration;
+
+  if (cssValue >= benchmark.target) {
+    interpretation = "CSS " + cssValue.toFixed(2) + " m/s meets or exceeds " + currentPhase + " benchmark (" + benchmark.target + " m/s). Aerobic base is developing correctly.";
+  } else if (cssValue >= benchmark.min) {
+    interpretation = "CSS " + cssValue.toFixed(2) + " m/s is within acceptable range for " + currentPhase + ". Monitor closely at next phase entry.";
+  } else {
+    interpretation = "CSS " + cssValue.toFixed(2) + " m/s is below " + currentPhase + " minimum (" + benchmark.min + " m/s). Aerobic base is underdeveloped. Prioritise Z2–Z3 volume before phase advancement.";
+  }
+
+  // Zone calibration from CSS
+  const z3LowerBound = (cssValue * 0.90 * 100).toFixed(0);  // 90% of CSS velocity = 111% of CSS pace
+  const z3UpperBound = (cssValue * 1.00 * 100).toFixed(0);  // 100% of CSS = CSS pace
+  const z2Target     = (cssValue * 0.85 * 100).toFixed(0);
+
+  zoneCalibration = {
+    Z2_target_velocity: (cssValue * 0.85).toFixed(2) + " m/s",
+    Z3_range_velocity:  (cssValue * 0.90).toFixed(2) + "–" + (cssValue * 1.00).toFixed(2) + " m/s (CSS pace ±0)",
+    Z4_target_velocity: (cssValue * 1.04).toFixed(2) + " m/s",
+    Z5_target_velocity: "> " + (cssValue * 1.10).toFixed(2) + " m/s",
+    note: "Recalculate zones after each CSS test. Zones shift as CSS improves.",
+  };
+
+  return {
+    available: true,
+    cssValue,
+    phaseBenchmark: benchmark,
+    interpretation,
+    zoneCalibration,
+    actionRequired: cssValue < benchmark.min,
+  };
+}
+
+// ═══════════════════════════════════════════════════════════════════════
+// HELPER FUNCTIONS
+// ═══════════════════════════════════════════════════════════════════════
+
+function buildContextOverrideResponse(athlete, override, gapPercent, fatigueIndex, readiness, phase, profile) {
+  return {
+    athlete: { name: athlete.name, event: athlete.event, category: athlete.category },
+    contextOverride: true,
+    override,
+    gapPercent,
+    fatigueIndex, readiness,
+    loadPrescription: {
+      severity: override.blocked ? "BLOCKED" : override.invalidTrial ? "INVALID_TRIAL" : "TEMPORARY_HOLD",
+      volumeChange: 0,
+      newDailyVolumeMetres: phase.volumeRange.target,
+      rationale: override.reason,
+      urgency: override.blocked ? "medical_assessment" : override.invalidTrial ? "repeat_trial" : "hold_and_monitor",
+    },
+    sessionPrescription: null,
+    nextPhaseProjection: null,
+    taperSignal: { signal: false },
+  };
+}
+
+function getCurrentPrimaryZone(zoneDistribution) {
+  return Object.entries(zoneDistribution).reduce((a, b) => zoneDistribution[a] > b[1] ? a : b[0]);
+}
+
+function shiftZone(currentZone, shift) {
+  const zones = ["Z1", "Z2", "Z3", "Z4", "Z5"];
+  const idx   = zones.indexOf(currentZone);
+  const newIdx = Math.max(0, Math.min(zones.length - 1, idx + shift));
+  return zones[newIdx];
+}
+
+function normalizeZones(distribution) {
+  const total = Object.values(distribution).reduce((a, b) => a + b, 0);
+  if (total === 100) return distribution;
+  const normalized = {};
+  const factor = 100 / total;
+  Object.entries(distribution).forEach(([z, v]) => { normalized[z] = Math.round(v * factor); });
+  return normalized;
+}
+
+function getWeeksToNextMilestone(currentPhase, currentWeek) {
+  const milestones = { SPP1: 16, SPP2: 24, COMP: 31, TAPER: 35, CHAMP: 36 };
+  const nextMilestone = milestones[currentPhase] ?? 36;
+  return Math.max(0, nextMilestone - currentWeek);
+}
+
+// ═══════════════════════════════════════════════════════════════════════
+// SQUAD-LEVEL ANALYSIS
+// ═══════════════════════════════════════════════════════════════════════
+
+/**
+ * Analyze full squad and return ranked risk list + group recommendations
+ * @param {Array} athletes - Array of athlete objects with results
+ * @param {number} currentWeek
+ * @param {string} currentPhase
+ * @returns {Object} Squad analysis report
+ */
+function analyzeSquad(athletes, currentWeek, currentPhase) {
+
+  const athleteReports = [];
+  const flagged        = [];
+  const onTrack        = [];
+  const taperCandidates = [];
+
+  for (const athlete of athletes) {
+    // Find most recent trial result
+    const trialNumber = athlete.results.t3 ? 3 : athlete.results.t2 ? 2 : athlete.results.t1 ? 1 : null;
+    if (!trialNumber) continue;
+
+    const report = generateAdaptation(athlete, currentWeek, currentPhase, trialNumber);
+    athleteReports.push(report);
+
+    const gap = report.trial?.gapPercent ?? 0;
+    if (gap > 5 || report.readiness?.state === "OVERREACHED") {
+      flagged.push({ name: athlete.name, gap, state: report.readiness?.state, urgency: report.loadPrescription?.urgency });
+    } else if (gap <= 0) {
+      onTrack.push({ name: athlete.name, gap, state: report.readiness?.state });
+    }
+
+    if (report.taperSignal?.signal) {
+      taperCandidates.push({ name: athlete.name, recommendation: report.taperSignal.recommendation });
+    }
+  }
+
+  // Sort flagged athletes by severity
+  flagged.sort((a, b) => b.gap - a.gap);
+
+  // Squad-level phase recommendation
+  const avgGap = athleteReports
+    .filter(r => r.trial)
+    .reduce((sum, r) => sum + (r.trial.gapPercent ?? 0), 0) / Math.max(athleteReports.length, 1);
+
+  const squadPhaseRecommendation = avgGap <= 2
+    ? "Squad is on track. Proceed with planned " + currentPhase + " progression."
+    : avgGap <= 6
+    ? "Squad showing moderate gap (avg " + avgGap.toFixed(1) + "%). Consider 5% volume adjustment for next 2 weeks."
+    : "Squad significantly behind (avg " + avgGap.toFixed(1) + "%). Phase plan review recommended.";
+
+  return {
+    currentPhase, currentWeek,
+    totalAthletes: athletes.length,
+    analyzed: athleteReports.length,
+    squadAverageGap: parseFloat(avgGap.toFixed(2)),
+    squadPhaseRecommendation,
+    flaggedAthletes: flagged,
+    onTrackAthletes: onTrack,
+    taperCandidates,
+    individualReports: athleteReports,
+  };
+}
+
+// ═══════════════════════════════════════════════════════════════════════
+// EXPORTS
+// ═══════════════════════════════════════════════════════════════════════
+
+// For Node.js / Vercel serverless
+if (typeof module !== "undefined" && module.exports) {
+  module.exports = {
+    generateAdaptation,
+    analyzeSquad,
+    calculateFatigueIndex,
+    getReadinessState,
+    PHASES,
+    STROKE_PROFILES,
+    INTENSITY_ZONES,
+  };
+}
+
+// For browser (AQUASTROKE dashboard)
+if (typeof window !== "undefined") {
+  window.AdaptEngine = {
+    generateAdaptation,
+    analyzeSquad,
+    calculateFatigueIndex,
+    getReadinessState,
+    PHASES,
+    STROKE_PROFILES,
+    INTENSITY_ZONES,
+  };
+}
+
+
+// ─── Season state (hardcoded until backend; coach can override) ─────────
+function getCurrentSeason() {
+  return {
+    currentWeek: S.seasonWeek || 20,
+    currentPhase: S.currentPhase || 'SPP2',
+  };
+}
+
+// ─── Card severity colour helper ────────────────────────────────────────
+function severityColor(sev) {
+  return {
+    'POSITIVE':        '#059669',
+    'ON_TRACK':        '#059669',
+    'MINOR_GAP':       '#3B82F6',
+    'EFFORT_GAP':      '#D97706',
+    'STIMULUS_GAP':    '#D97706',
+    'FATIGUED_GAP':    '#DC2626',
+    'SIGNIFICANT_GAP': '#DC2626',
+    'CRITICAL_GAP':    '#DC2626',
+    'BLOCKED':         '#DC2626',
+    'INVALID_TRIAL':   '#D97706',
+    'TEMPORARY_HOLD':  '#D97706',
+  }[sev] || '#94A3B8';
+}
+
+function readinessColor(state) {
+  return { RECOVERED:'#059669', LOADED:'#3B82F6', FATIGUED:'#D97706', OVERREACHED:'#DC2626', UNKNOWN:'#94A3B8' }[state] || '#94A3B8';
+}
+
+// ─── Render one athlete's full prescription card ────────────────────────
+function renderAthleteAdaptCard(rpt) {
+  if (rpt.error) {
+    return `<div style="border:1px solid var(--border);border-radius:var(--radius);padding:14px;margin-bottom:10px;color:var(--text-3);font-size:13px">${rpt.athlete?.name || 'Unknown'} — ${rpt.error}</div>`;
+  }
+
+  const lp  = rpt.loadPrescription;
+  const sp  = rpt.sessionPrescription;
+  const npp = rpt.nextPhaseProjection;
+  const ts  = rpt.taperSignal;
+  const css = rpt.cssImplication;
+  const fi  = rpt.fatigueIndex;
+  const rd  = rpt.readiness;
+  const gap = rpt.trial?.gapPercent;
+  const sevCol = severityColor(lp?.severity);
+  const rdCol  = readinessColor(rd?.state);
+
+  const gapBadge = gap != null
+    ? `<span style="font-size:13px;font-weight:800;color:${gap<=0?'#059669':gap<=5?'#D97706':'#DC2626'}">${gap>0?'+':''}${gap.toFixed(1)}%</span>`
+    : '';
+
+  const rpeBadge = rpt.trial && rpt.trial.rpe != null
+    ? `<span style="background:#F1F5F9;border-radius:6px;padding:2px 8px;font-size:11px;font-weight:700">RPE ${rpt.trial.rpe}</span>`
+    : `<span style="background:#FEF9EE;border-radius:6px;padding:2px 8px;font-size:11px;color:#D97706">No RPE</span>`;
+
+  const fiBar = fi != null
+    ? `<div style="display:flex;align-items:center;gap:8px;margin-top:6px">
+        <span style="font-size:11px;color:var(--text-3);min-width:88px">Fatigue Index</span>
+        <div style="flex:1;height:6px;background:var(--border);border-radius:3px;overflow:hidden">
+          <div style="width:${fi}%;height:100%;background:${rdCol};border-radius:3px;transition:width .4s"></div>
+        </div>
+        <span style="font-size:11px;font-weight:700;color:${rdCol};min-width:32px;text-align:right">${fi}</span>
+      </div>`
+    : '';
+
+  // Volume change arrow
+  const volChange = lp?.volumeChangeMetres;
+  const volArrow  = volChange == null ? '' : volChange === 0 ? '→ Maintain' :
+    volChange > 0 ? `↑ +${volChange}m/day` : `↓ ${volChange}m/day`;
+  const volColor  = volChange == null ? '#94A3B8' : volChange === 0 ? '#3B82F6' :
+    volChange > 0 ? '#059669' : '#DC2626';
+
+  // Session zone distribution bar
+  let zoneBars = '';
+  if (sp?.intensityZoneDistribution) {
+    const zd = sp.intensityZoneDistribution;
+    const zColors = { Z1:'#94A3B8', Z2:'#60A5FA', Z3:'#F59E0B', Z4:'#F97316', Z5:'#EF4444' };
+    zoneBars = `<div style="margin-top:10px">
+      <div style="font-size:11px;color:var(--text-3);margin-bottom:5px;font-weight:600;text-transform:uppercase;letter-spacing:.5px">Intensity Zone Distribution</div>
+      <div style="display:flex;height:12px;border-radius:6px;overflow:hidden;gap:1px">
+        ${Object.entries(zd).map(([z,v])=>v>0?`<div style="flex:${v};background:${zColors[z]};position:relative" title="${z}: ${v}%"></div>`:'').join('')}
+      </div>
+      <div style="display:flex;gap:10px;margin-top:5px;flex-wrap:wrap">
+        ${Object.entries(zd).map(([z,v])=>v>0?`<span style="font-size:10px;color:${zColors[z]};font-weight:700">${z} ${v}%</span>`:'').join('')}
+      </div>
+    </div>`;
+  }
+
+  // Energy system split
+  let energyBars = '';
+  if (sp?.energySystemSplit) {
+    const es = sp.energySystemSplit;
+    energyBars = `<div style="display:flex;gap:8px;margin-top:8px">
+      ${[['Aerobic',es.aerobic,'#60A5FA'],['Lactate',es.lactate,'#F59E0B'],['Alactic',es.alactic,'#EF4444']].map(([label,pct,col])=>`
+        <div style="flex:1;background:#F8FAFC;border-radius:8px;padding:8px;text-align:center">
+          <div style="font-size:18px;font-weight:800;color:${col}">${pct}%</div>
+          <div style="font-size:10px;color:var(--text-3);margin-top:2px">${label}</div>
+        </div>`).join('')}
+    </div>`;
+  }
+
+  // Taper signal
+  const taperHtml = ts?.signal
+    ? `<div style="background:#F0FDF4;border:1px solid #059669;border-radius:var(--radius);padding:10px 12px;margin-top:10px;font-size:12px;color:#059669;font-weight:600">
+        🎯 Taper Signal Detected (strength: ${ts.strength}) — ${ts.recommendation}
+      </div>`
+    : '';
+
+  // Attendance flag
+  const attHtml = rpt.attendanceFlag
+    ? `<div style="background:${rpt.attendanceFlag.level==='critical'?'#FEF2F2':'#FFFBEB'};border-left:3px solid ${rpt.attendanceFlag.level==='critical'?'#DC2626':'#D97706'};border-radius:0 6px 6px 0;padding:8px 12px;margin-top:8px;font-size:12px;color:var(--text-2)">${rpt.attendanceFlag.message}</div>`
+    : '';
+
+  // Next phase projection
+  const nppHtml = npp && !npp.message
+    ? `<div style="margin-top:10px;padding:10px;background:#F8FAFC;border-radius:8px;font-size:12px;color:var(--text-2)">
+        <strong style="color:var(--ocean)">${npp.nextPhase} Entry Plan</strong><br/>
+        Volume: ${npp.volumeRecommendation?.target}m/day — ${npp.volumeRecommendation?.modifier}<br/>
+        ${npp.intensityFocus}
+      </div>`
+    : '';
+
+  // CSS implication
+  const cssHtml = css?.available
+    ? `<div style="margin-top:8px;font-size:12px;color:var(--text-2)">
+        <strong style="color:${css.actionRequired?'#DC2626':'#059669'}">CSS ${css.cssValue?.toFixed(2)} m/s</strong> — ${css.interpretation}
+      </div>`
+    : `<div style="margin-top:8px;font-size:12px;color:var(--text-3);font-style:italic">CSS not recorded — run CSS protocol: 400m TT + rest + 200m TT</div>`;
+
+  // Context override card (simplified)
+  if (rpt.contextOverride) {
+    return `<div style="border:2px solid ${lp?.urgency==='medical_assessment'?'#DC2626':'#D97706'};border-radius:var(--radius);padding:16px;margin-bottom:12px">
+      <div style="display:flex;justify-content:space-between;align-items:center;margin-bottom:8px">
+        <div style="font-weight:700;font-size:14px">${rpt.athlete.name}</div>
+        <span style="background:${lp?.urgency==='medical_assessment'?'#FEF2F2':'#FEF9EE'};color:${lp?.urgency==='medical_assessment'?'#DC2626':'#D97706'};border-radius:6px;padding:3px 10px;font-size:11px;font-weight:700">${lp?.severity}</span>
+      </div>
+      <div style="font-size:13px;color:var(--text-2);font-weight:600">${rpt.override?.reason}</div>
+      ${gapBadge ? `<div style="margin-top:8px;font-size:12px;color:var(--text-3)">Recorded gap: ${gapBadge}</div>` : ''}
+    </div>`;
+  }
+
+  return `<div style="border:1px solid var(--border);border-radius:var(--radius);margin-bottom:14px;overflow:hidden">
+    <!-- Header -->
+    <div style="padding:14px 16px;border-bottom:1px solid var(--border);display:flex;justify-content:space-between;align-items:center">
+      <div>
+        <div style="font-weight:700;font-size:14px">${rpt.athlete.name}</div>
+        <div style="font-size:11px;color:var(--text-3);margin-top:2px">${rpt.athlete.event} · ${rpt.athlete.category}</div>
+      </div>
+      <div style="display:flex;gap:6px;align-items:center">
+        ${gapBadge} ${rpeBadge}
+        <span style="background:${rdCol}22;color:${rdCol};border-radius:6px;padding:3px 9px;font-size:11px;font-weight:700">${rd?.state}</span>
+      </div>
+    </div>
+
+    <!-- Body -->
+    <div style="padding:14px 16px">
+
+      <!-- Severity + rationale -->
+      <div style="border-left:3px solid ${sevCol};padding:8px 12px;background:${sevCol}11;border-radius:0 6px 6px 0;margin-bottom:10px">
+        <div style="font-size:11px;font-weight:700;color:${sevCol};text-transform:uppercase;letter-spacing:.5px;margin-bottom:3px">${lp?.severity?.replace(/_/g,' ')}</div>
+        <div style="font-size:12px;color:var(--text-2);line-height:1.55">${lp?.rationale}</div>
+      </div>
+
+      <!-- Load numbers -->
+      <div style="display:flex;gap:10px;margin-bottom:10px">
+        <div style="flex:1;background:#F8FAFC;border-radius:8px;padding:10px;text-align:center">
+          <div style="font-size:18px;font-weight:800;color:${volColor}">${volArrow}</div>
+          <div style="font-size:10px;color:var(--text-3);margin-top:2px">Volume / day</div>
+          <div style="font-size:11px;color:var(--text-3)">${lp?.newDailyVolumeMetres || '—'}m target</div>
+        </div>
+        ${fi != null ? `<div style="flex:1;background:#F8FAFC;border-radius:8px;padding:10px;text-align:center">
+          <div style="font-size:18px;font-weight:800;color:${rdCol}">${fi}</div>
+          <div style="font-size:10px;color:var(--text-3);margin-top:2px">Fatigue Index</div>
+          <div style="font-size:11px;color:${rdCol}">${rd?.state}</div>
+        </div>` : ''}
+        <div style="flex:1;background:#F8FAFC;border-radius:8px;padding:10px;text-align:center">
+          <div style="font-size:18px;font-weight:800;color:var(--brand)">${lp?.weeksRemaining || '—'}</div>
+          <div style="font-size:10px;color:var(--text-3);margin-top:2px">Weeks to next trial</div>
+          <div style="font-size:11px;color:var(--text-3)">Primary: ${lp?.primaryIntensityZone || '—'}</div>
+        </div>
+      </div>
+
+      ${zoneBars}
+      ${energyBars}
+      ${attHtml}
+      ${cssHtml}
+      ${taperHtml}
+      ${nppHtml}
+
+      <!-- Urgency action -->
+      ${lp?.urgency && lp.urgency !== 'none' ? `<div style="margin-top:10px;font-size:11px;font-weight:700;color:${sevCol};text-transform:uppercase;letter-spacing:.5px">Action: ${lp.urgency.replace(/_/g,' ')}</div>` : ''}
+    </div>
+  </div>`;
+}
+
+// ─── getAdaptRecommendation (inline for trial cards — quick version) ────
+function getAdaptRecommendation(gap, rpe, context, category) {
+  const { currentWeek, currentPhase } = getCurrentSeason();
+  const athlete = { name:'', event:'', category: category||'Middle',
+    attendance:{planned:1,attended:1}, targets:{t1:100}, results:{t1:{actual:100+gap,rpe,context}} };
+  athlete.results.t1.actual = 100 * (1 + gap/100);
+  const r = generateAdaptation(athlete, currentWeek, currentPhase, 1);
+  if (r.error || r.contextOverride) return r.loadPrescription?.rationale || '—';
+  return r.loadPrescription?.rationale || '—';
+}
+
+// ─── Main runAdapt — full squad analysis ────────────────────────────────
+async function runAdapt() {
+  if (window.AQ?.isBackendMode()) { try { await window.AQ.Squad.adapt(); } catch(e){} }
+  const btn = document.getElementById('adaptBtn');
+  btn.classList.add('loading');
+  btn.textContent = '⏳ Running professional periodization analysis...';
+
+  setTimeout(() => {
+    btn.classList.remove('loading');
+    btn.textContent = '⚡ Auto-Adapt Season Plan';
+    const res = document.getElementById('adapt-result');
+
+    const athletes = S.athletes.filter(a => a.results.t1 || a.results.t2 || a.results.t3);
+    if (!athletes.length) {
+      res.style.display = 'block';
+      res.innerHTML = '<div style="background:var(--amber-l);border:1px solid var(--amber);border-radius:var(--radius);padding:14px;font-size:14px;color:var(--amber);">⚠️ No trial results found. Record results first, including RPE and context flag.</div>';
+      return;
+    }
+
+    const { currentWeek, currentPhase } = getCurrentSeason();
+    const squadReport = analyzeSquad(athletes, currentWeek, currentPhase);
+
+    // Squad summary header
+    const avgGap = squadReport.squadAverageGap;
+    const avgCol = avgGap <= 2 ? '#059669' : avgGap <= 6 ? '#D97706' : '#DC2626';
+    const header = `
+      <div style="border:1px solid var(--border);border-radius:var(--radius);padding:14px 16px;margin-bottom:16px;background:var(--gray-1)">
+        <div style="font-size:13px;font-weight:700;color:var(--ocean);margin-bottom:8px">Squad Analysis — Week ${currentWeek} · ${currentPhase} Phase</div>
+        <div style="display:flex;gap:12px;margin-bottom:10px">
+          <div style="flex:1;text-align:center">
+            <div style="font-size:22px;font-weight:800;color:${avgCol}">${avgGap > 0 ? '+' : ''}${avgGap.toFixed(1)}%</div>
+            <div style="font-size:11px;color:var(--text-3)">Squad Avg Gap</div>
+          </div>
+          <div style="flex:1;text-align:center">
+            <div style="font-size:22px;font-weight:800;color:#DC2626">${squadReport.flaggedAthletes.length}</div>
+            <div style="font-size:11px;color:var(--text-3)">Flagged</div>
+          </div>
+          <div style="flex:1;text-align:center">
+            <div style="font-size:22px;font-weight:800;color:#059669">${squadReport.onTrackAthletes.length}</div>
+            <div style="font-size:11px;color:var(--text-3)">On Track</div>
+          </div>
+          <div style="flex:1;text-align:center">
+            <div style="font-size:22px;font-weight:800;color:#3B82F6">${squadReport.taperCandidates.length}</div>
+            <div style="font-size:11px;color:var(--text-3)">Taper Signal</div>
+          </div>
+        </div>
+        <div style="font-size:12px;color:var(--text-2);font-style:italic">${squadReport.squadPhaseRecommendation}</div>
+      </div>`;
+
+    // Individual cards (flagged first, then on-track)
+    const sorted = [...squadReport.individualReports].sort((a, b) => {
+      const ga = a.trial?.gapPercent ?? 0;
+      const gb = b.trial?.gapPercent ?? 0;
+      return gb - ga;
+    });
+
+    const cards = sorted.map(rpt => renderAthleteAdaptCard(rpt)).join('');
+
+    const missingRPE = athletes.filter(a => {
+      const r = a.results.t3 || a.results.t2 || a.results.t1;
+      return r && !r.rpe;
+    });
+    const warning = missingRPE.length
+      ? `<div style="background:var(--amber-l);border:1px solid var(--amber);border-radius:var(--radius);padding:11px 14px;margin-bottom:12px;font-size:13px;color:var(--amber)">⚠️ ${missingRPE.length} athlete(s) missing RPE — Fatigue Index unavailable. Enter Borg CR-10 (1–10) when recording results.</div>`
+      : '';
+
+    res.style.display = 'block';
+    res.innerHTML = header + warning + `<div style="font-size:12px;font-weight:700;color:var(--text-3);text-transform:uppercase;letter-spacing:.5px;margin-bottom:10px">Individual Prescriptions — sorted by gap severity</div>` + cards;
+    showToast('✓ Professional analysis complete', 'success');
+  }, 1600);
+}
+
+// ═══════════════════════════════════════
+// ATHLETE VIEW
+// ═══════════════════════════════════════
+function renderAthleteView() {
+  const sel = document.getElementById('av-select');
+  const curr = sel.value;
+  sel.innerHTML = '<option value="">Select athlete...</option>' + S.athletes.map(a=>`<option value="${a.id}" ${a.id==curr?'selected':''}>${a.name}</option>`).join('');
+  if(curr) setAthleteView(curr);
+}
+function setAthleteView(id) {
+  const a = S.athletes.find(x=>x.id==id); if(!a) return;
+  const cont = document.getElementById('av-trials');
+  cont.innerHTML = `<div class="trial-compare">${[1,2,3].map(n=>{
+    const r=a.results['t'+n],tgt=a.targets['t'+n],weeks=[16,24,31],phases=['SPP1','SPP2','COMP'];
+    const g=r&&tgt?((r.actual-tgt)/tgt*100).toFixed(1):null;
+    return`<div class="tc-box ${r?'active':''}"><div class="tc-num">Trial ${n}</div><div class="tc-val ${g?parseFloat(g)<=0?'good':'bad':''}">${r?r.actual+'s':'—'}</div><div class="tc-target">Week ${weeks[n-1]} · ${phases[n-1]}${tgt?' · Target: '+tgt+'s':''}</div>${g?`<div class="tc-gap ${parseFloat(g)<=0?'good':'bad'}">${parseFloat(g)>0?'+':''}${g}%</div>`:''}</div>`;
+  }).join('')}</div>`;
+}
+
+// ═══════════════════════════════════════
+// SEASON PLAN
+// ═══════════════════════════════════════
+function setPhase(el, phase) {
+  document.querySelectorAll('.phase-chip').forEach(c=>c.classList.remove('current'));
+  el.classList.add('current');
+  showToast('Viewing '+phase+' phase','success');
+}
+
+// ═══════════════════════════════════════
+// EXCEL EXPORT
+// ═══════════════════════════════════════
+async function exportExcel() {
+  if (window.AQ?.isBackendMode()) { try { await window.AQ.Squad.export("csv"); showToast("⬇ Export downloaded","success"); return; } catch(e){} }
+  if(!S.athletes.length){showToast('No athletes to export','error');return;}
+  const rows=[['Name','Event','DOB','T1 Target','T1 Actual','T1 Gap%','T2 Target','T2 Actual','T2 Gap%','T3 Target','T3 Actual','T3 Gap%','Notes']];
+  S.athletes.forEach(a=>{
+    const g=(n)=>{const r=a.results['t'+n],t=a.targets['t'+n];return r&&t?((r.actual-t)/t*100).toFixed(1)+'%':'';};
+    rows.push([a.name,a.event,a.dob||'',a.targets.t1||'',a.results.t1?.actual||'',g(1),a.targets.t2||'',a.results.t2?.actual||'',g(2),a.targets.t3||'',a.results.t3?.actual||'',g(3),a.notes||'']);
+  });
+  const csv=rows.map(r=>r.map(c=>`"${c}"`).join(',')).join('\n');
+  const blob=new Blob(['\uFEFF'+csv],{type:'text/csv;charset=utf-8'});
+  const url=URL.createObjectURL(blob);
+  const link=document.createElement('a');link.href=url;link.download='AQUASTROKE_'+new Date().toISOString().split('T')[0]+'.csv';link.click();
+  URL.revokeObjectURL(url);
+  showToast('⬇ Excel file downloaded','success');
+}
+
+// ═══════════════════════════════════════
+// PDF REPORT
+// ═══════════════════════════════════════
+function generatePDF() {
+  const a=S.current; if(!a){showToast('No athlete selected','error');return;}
+  const g=(n)=>{const r=a.results['t'+n],tgt=a.targets['t'+n];return r&&tgt?((r.actual-tgt)/tgt*100).toFixed(1):null;};
+  const trialHtml=(n)=>{const r=a.results['t'+n],tgt=a.targets['t'+n],gap=g(n),weeks=[16,24,31],phases=['SPP1','SPP2','COMP'];const good=gap&&parseFloat(gap)<=0;return`<div style="flex:1;border:1px solid #E4E9F0;border-radius:8px;padding:14px"><div style="font-size:10px;letter-spacing:2px;color:#94A3B8;text-transform:uppercase;margin-bottom:4px;">Trial ${n}</div><div style="font-size:12px;color:#94A3B8;margin-bottom:10px">Week ${weeks[n-1]} · ${phases[n-1]}</div>${tgt?`<div style="display:flex;justify-content:space-between;font-size:13px;margin-bottom:4px"><span style="color:#64748B">Target</span><b>${tgt}s</b></div>`:''}${r?`<div style="display:flex;justify-content:space-between;font-size:13px;margin-bottom:6px"><span style="color:#64748B">Actual</span><b style="color:${good?'#059669':'#DC2626'}">${r.actual}s</b></div><div style="font-size:12px;font-weight:700;color:${good?'#059669':'#DC2626'}">${gap?`${parseFloat(gap)>0?'+':''}${gap}% ${good?'✓ Met':'↑ Improve'}`:'Recorded'}</div>`:`<div style="color:#94A3B8;font-size:12px;font-style:italic">Not recorded</div>`}</div>`;};
+  const w=window.open('','_blank');
+  w.document.write(`<!DOCTYPE html><html><head><meta charset="UTF-8"><title>AQUASTROKE — ${a.name}</title><style>*{margin:0;padding:0;box-sizing:border-box}body{font-family:-apple-system,BlinkMacSystemFont,'Segoe UI',system-ui,sans-serif;color:#0A1628;padding:40px}@media print{body{padding:20px}.noprint{display:none}@page{margin:14mm}}</style></head><body>
+    <div style="display:flex;justify-content:space-between;align-items:center;margin-bottom:28px;padding-bottom:18px;border-bottom:2px solid #0057FF">
+      <div><div style="font-size:22px;font-weight:900;letter-spacing:2px;color:#0057FF">AQUASTROKE</div><div style="font-size:11px;color:#94A3B8;letter-spacing:1px;margin-top:2px">ATHLETE PERFORMANCE REPORT</div></div>
+      <div style="text-align:right"><div style="font-size:11px;color:#64748B">Generated</div><div style="font-size:13px;font-weight:700">${new Date().toLocaleDateString('en-GB',{day:'2-digit',month:'short',year:'numeric'})}</div></div>
+    </div>
+    <div style="background:#F7F9FC;border-radius:10px;padding:18px;margin-bottom:22px;display:flex;gap:16px;align-items:center">
+      <div style="width:52px;height:52px;border-radius:12px;background:#0057FF;display:flex;align-items:center;justify-content:center;color:white;font-size:18px;font-weight:900;flex-shrink:0">${a.name.split(' ').map(w=>w[0]).join('').slice(0,2)}</div>
+      <div><div style="font-size:20px;font-weight:900">${a.name}</div><div style="font-size:13px;color:#64748B">${a.event}${a.dob?' · DOB: '+a.dob:''}</div></div>
+    </div>
+    <div style="font-size:12px;font-weight:700;letter-spacing:1px;text-transform:uppercase;color:#0A1628;margin-bottom:12px">Trial Results</div>
+    <div style="display:flex;gap:12px;margin-bottom:22px">${trialHtml(1)}${trialHtml(2)}${trialHtml(3)}</div>
+    ${a.notes?`<div style="background:#F7F9FC;border-radius:8px;padding:14px;font-size:13px;color:#64748B;margin-bottom:22px"><b>Notes:</b> ${a.notes}</div>`:''}
+    <div style="text-align:center;border-top:1px solid #E4E9F0;padding-top:14px;font-size:11px;color:#CBD5E1">AQUASTROKE · Season 2025/2026</div>
+    <div class="noprint" style="text-align:center;margin-top:24px"><button onclick="window.print()" style="background:#0057FF;color:white;border:none;padding:11px 28px;border-radius:8px;font-size:14px;font-weight:700;cursor:pointer;font-family:-apple-system,BlinkMacSystemFont,'Segoe UI',system-ui,sans-serif">🖨️ Print / Save as PDF</button><div style="margin-top:6px;font-size:11px;color:#94A3B8">Choose "Save as PDF" in print dialog</div></div>
+  </body></html>`);
+  w.document.close();
+  showToast('✓ PDF report opened','success');
+}
+
+// ═══════════════════════════════════════
+// FILES
+// ═══════════════════════════════════════
+function handleDrop(e){e.preventDefault();document.getElementById('uploadZone').classList.remove('over');handleUpload(e.dataTransfer.files);}
+function handleUpload(files){
+  Array.from(files).forEach(f=>{
+    S.files.push({id:Date.now()+Math.random(),name:f.name,size:f.size,type:f.name.split('.').pop().toUpperCase(),date:new Date().toLocaleDateString('en-GB',{day:'2-digit',month:'short'}),data:f});
+  });
+  renderFiles();
+  showToast('✓ '+files.length+' file(s) uploaded','success');
+}
+function renderFiles(){
+  const list=document.getElementById('file-list');
+  if(!S.files.length){list.innerHTML='<div style="text-align:center;padding:28px;color:var(--text-3)"><div style="font-size:28px;margin-bottom:6px">📂</div><div style="font-size:14px">No files yet</div></div>';return;}
+  const fmt=b=>b<1024?b+'B':b<1048576?(b/1024).toFixed(1)+'KB':(b/1048576).toFixed(1)+'MB';
+  list.innerHTML=S.files.map(f=>`<div class="file-row"><div class="file-ic">${f.type==='PDF'?'📄':f.type==='XLSX'||f.type==='CSV'?'📊':f.type==='DOCX'?'📝':'📎'}</div><div><div class="file-name">${f.name}</div><div class="file-sz">${fmt(f.size)} · ${f.date}</div></div><button class="btn btn-outline btn-sm" onclick="dlFile('${f.id}')">⬇</button><button class="btn btn-danger btn-sm btn-icon" onclick="rmFile('${f.id}')">✕</button></div>`).join('');
+}
+function dlFile(id){const f=S.files.find(x=>x.id==id);if(!f||!f.data)return;const url=URL.createObjectURL(f.data);const a=document.createElement('a');a.href=url;a.download=f.name;a.click();URL.revokeObjectURL(url);showToast('⬇ Downloading...','success');}
+function rmFile(id){S.files=S.files.filter(f=>f.id!=id);renderFiles();showToast('File deleted');}
+
+// ═══════════════════════════════════════
+// AUTH (DEMO)
+// ═══════════════════════════════════════
+function handleSocialAuth(provider) {
+  showToast('Connecting to '+provider+'...','success');
+  setTimeout(()=>switchView('view-dashboard'),1400);
+}
+
+// ═══════════════════════════════════════
+// TOAST
+// ═══════════════════════════════════════
+let toastTimer;
+function showToast(msg,type=''){
+  const t=document.getElementById('toast');
+  t.textContent=msg; t.className='toast '+(type||'')+' show';
+  clearTimeout(toastTimer);
+  toastTimer=setTimeout(()=>t.classList.remove('show'),3000);
+}
+
+// ═══════════════════════════════════════
+// REVEAL ON SCROLL
+// ═══════════════════════════════════════
+function initReveal(){
+  const obs=new IntersectionObserver(es=>es.forEach(e=>{if(e.isIntersecting)e.target.classList.add('vis');}),{threshold:.1});
+  document.querySelectorAll('.reveal').forEach(el=>{el.classList.remove('vis');obs.observe(el);});
+}
+window.addEventListener('scroll',()=>{
+  document.getElementById('lpNav')?.classList.toggle('solid',window.scrollY>20);
+});
+
+// INIT
+initReveal();
+renderOverview();
+
+async function handleEmailLogin() {
+  const email = document.getElementById('authEmail')?.value?.trim();
+  const password = document.getElementById('authPassword')?.value;
+  if (!email || !password) { showToast('Enter email and password','error'); return; }
+  try {
+    showToast('Signing in...','success');
+    const client = window._supabaseClient;
+    if (!client) { switchView('view-dashboard'); return; }
+    const { data, error } = await client.auth.signInWithPassword({ email, password });
+    if (error) throw error;
+    showToast('✓ Welcome back!','success');
+    switchView('view-dashboard');
+    await loadFromBackend();
+  } catch(e) { showToast(e.message||'Login failed','error'); }
+}
+
+async function loadFromBackend() {
+  if (!window.AQ?.isBackendMode()) return;
+  try {
+    const { athletes, season } = await window.AQ.apiLoadDashboard() || {};
+    if (athletes?.length) {
+      S.athletes = athletes.map(a => {
+        const trialMap = {};
+        (a.trial_results||[]).forEach(t => {
+          trialMap['t'+t.trial_number] = { actual:t.actual_time, date:t.trial_date, rpe:t.rpe, context:t.context, strokeRate:t.stroke_rate, notes:t.notes };
+        });
+        return { id:a.id, name:a.name, event:a.event, category:a.category, dob:a.dob, notes:a.notes,
+          targets:{t1:a.target_t1,t2:a.target_t2,t3:a.target_t3}, results:trialMap,
+          attendance:{planned:a.attendance_planned,attended:a.attendance_attended}, added:a.added_date };
+      });
+      updateCounts(); renderOverview();
+      showToast('✓ Data loaded','success');
+    }
+  } catch(e) { console.warn('Backend load:', e.message); }
+}
+
+(async () => {
+  const connected = initSupabase();
+  if (connected) {
+    const el = document.getElementById('cloud-status');
+    if (el) el.style.display = 'block';
+    if (window._supabaseClient) {
+      const { data: { session } } = await window._supabaseClient.auth.getSession().catch(()=>({data:{session:null}}));
+      if (session) await loadFromBackend();
+    }
+  }
+})();
+</script>
+</body>
+</html>

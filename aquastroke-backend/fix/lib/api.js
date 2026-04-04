@@ -1,0 +1,12 @@
+"use strict";
+const ORIGIN = process.env.APP_URL || "*";
+const cors = { "Access-Control-Allow-Origin":ORIGIN, "Access-Control-Allow-Methods":"GET,POST,PATCH,DELETE,OPTIONS", "Access-Control-Allow-Headers":"Content-Type,Authorization" };
+const handleOptions = () => ({ statusCode:204, headers:cors, body:"" });
+const ok = (data,meta={}) => ({ statusCode:200, headers:{...cors,"Content-Type":"application/json"}, body:JSON.stringify({data,meta}) });
+const created = data => ({ statusCode:201, headers:{...cors,"Content-Type":"application/json"}, body:JSON.stringify({data}) });
+const noContent = () => ({ statusCode:204, headers:cors, body:"" });
+const error = (status,message) => ({ statusCode:status, headers:{...cors,"Content-Type":"application/problem+json"}, body:JSON.stringify({title:message,status}) });
+const handleError = e => { console.error("API Error:",e); if(e?.status&&e?.message) return error(e.status,e.message); if(e?.code==="23505") return error(409,"Record already exists"); return error(500,"Internal server error"); };
+const parseBody = event => { try { return event.body ? (typeof event.body==="string"?JSON.parse(event.body):event.body) : {}; } catch { throw {status:400,message:"Invalid JSON body"}; }};
+const getIP = event => event.headers?.["x-forwarded-for"]?.split(",")[0]?.trim() || "unknown";
+module.exports = { handleOptions, ok, created, noContent, error, handleError, parseBody, getIP };

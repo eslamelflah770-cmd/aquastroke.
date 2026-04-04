@@ -1,0 +1,79 @@
+[build]
+  publish = "public"
+  functions = "netlify/functions"
+
+[[redirects]]
+  from  = "/api/auth/*"
+  to    = "/.netlify/functions/auth/:splat"
+  status = 200
+
+[[redirects]]
+  from  = "/api/athletes/*"
+  to    = "/.netlify/functions/athletes/:splat"
+  status = 200
+
+[[redirects]]
+  from  = "/api/athletes"
+  to    = "/.netlify/functions/athletes"
+  status = 200
+
+[[redirects]]
+  from  = "/api/trials/*"
+  to    = "/.netlify/functions/trials/:splat"
+  status = 200
+
+[[redirects]]
+  from  = "/api/trials"
+  to    = "/.netlify/functions/trials"
+  status = 200
+
+[[redirects]]
+  from  = "/api/season"
+  to    = "/.netlify/functions/season"
+  status = 200
+
+[[redirects]]
+  from  = "/api/squad/*"
+  to    = "/.netlify/functions/squad/:splat"
+  status = 200
+
+[[redirects]]
+  from  = "/api/files/*"
+  to    = "/.netlify/functions/files/:splat"
+  status = 200
+
+[[redirects]]
+  from  = "/api/files"
+  to    = "/.netlify/functions/files"
+  status = 200
+
+[[redirects]]
+  from  = "/api/notifications/*"
+  to    = "/.netlify/functions/notifications/:splat"
+  status = 200
+
+[[redirects]]
+  from  = "/api/notifications"
+  to    = "/.netlify/functions/notifications"
+  status = 200
+
+[[redirects]]
+  from  = "/api/whatsapp"
+  to    = "/.netlify/functions/whatsapp"
+  status = 200
+
+[[redirects]]
+  from  = "/*"
+  to    = "/index.html"
+  status = 200
+
+[[headers]]
+  for = "/*"
+  [headers.values]
+    X-Frame-Options        = "DENY"
+    X-Content-Type-Options = "nosniff"
+
+[[headers]]
+  for = "/index.html"
+  [headers.values]
+    Cache-Control = "no-cache, no-store, must-revalidate"
