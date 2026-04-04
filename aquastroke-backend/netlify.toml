@@ -1,0 +1,89 @@
+[build]
+  publish = "public"
+  functions = "netlify/functions"
+
+# ── API rewrites: /api/* → /.netlify/functions/* ─────────────────────
+[[redirects]]
+  from  = "/api/auth/*"
+  to    = "/.netlify/functions/auth/:splat"
+  status = 200
+
+[[redirects]]
+  from  = "/api/athletes/*"
+  to    = "/.netlify/functions/athletes/:splat"
+  status = 200
+
+[[redirects]]
+  from  = "/api/athletes"
+  to    = "/.netlify/functions/athletes"
+  status = 200
+
+[[redirects]]
+  from  = "/api/trials/*"
+  to    = "/.netlify/functions/trials/:splat"
+  status = 200
+
+[[redirects]]
+  from  = "/api/trials"
+  to    = "/.netlify/functions/trials"
+  status = 200
+
+[[redirects]]
+  from  = "/api/season"
+  to    = "/.netlify/functions/season"
+  status = 200
+
+[[redirects]]
+  from  = "/api/squad/*"
+  to    = "/.netlify/functions/squad/:splat"
+  status = 200
+
+[[redirects]]
+  from  = "/api/files/*"
+  to    = "/.netlify/functions/files/:splat"
+  status = 200
+
+[[redirects]]
+  from  = "/api/files"
+  to    = "/.netlify/functions/files"
+  status = 200
+
+[[redirects]]
+  from  = "/api/notifications/*"
+  to    = "/.netlify/functions/notifications/:splat"
+  status = 200
+
+[[redirects]]
+  from  = "/api/notifications"
+  to    = "/.netlify/functions/notifications"
+  status = 200
+
+[[redirects]]
+  from  = "/api/whatsapp"
+  to    = "/.netlify/functions/whatsapp"
+  status = 200
+
+# ── SPA fallback ─────────────────────────────────────────────────────
+[[redirects]]
+  from  = "/*"
+  to    = "/index.html"
+  status = 200
+
+# ── Security headers ─────────────────────────────────────────────────
+[[headers]]
+  for = "/*"
+  [headers.values]
+    X-Frame-Options         = "DENY"
+    X-Content-Type-Options  = "nosniff"
+    Referrer-Policy         = "strict-origin-when-cross-origin"
+    Permissions-Policy      = "camera=(), microphone=(), geolocation=()"
+
+[[headers]]
+  for = "/*.js"
+  [headers.values]
+    Cache-Control = "public, max-age=31536000, immutable"
+
+[[headers]]
+  for = "/index.html"
+  [headers.values]
+    Cache-Control = "no-cache, no-store, must-revalidate"
